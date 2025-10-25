@@ -1,0 +1,224 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* Light mode theme (default) with bright, clean aesthetic using logo colors */
+:root {
+  --background: oklch(0.98 0 0); /* Almost white background #fafafa */
+  --foreground: oklch(0.15 0 0); /* Dark text for readability */
+  --card: oklch(1 0 0); /* Pure white cards */
+  --card-foreground: oklch(0.15 0 0); /* Dark text on cards */
+  --popover: oklch(1 0 0); /* White popover */
+  --popover-foreground: oklch(0.15 0 0); /* Dark text */
+  --primary: oklch(0.85 0.15 195); /* Cyan from logo #0ce6f0 */
+  --primary-foreground: oklch(0.15 0 0); /* Dark text on cyan */
+  --secondary: oklch(0.95 0 0); /* Light gray for secondary elements */
+  --secondary-foreground: oklch(0.15 0 0); /* Dark text */
+  --muted: oklch(0.96 0 0); /* Muted background */
+  --muted-foreground: oklch(0.45 0 0); /* Muted text */
+  --accent: oklch(0.5 0.25 265); /* Blue from logo #2256f7 */
+  --accent-foreground: oklch(0.98 0 0); /* Light text on blue */
+  --destructive: oklch(0.55 0.22 25); /* Red for destructive actions */
+  --destructive-foreground: oklch(0.98 0 0); /* Light text on red */
+  --border: oklch(0.88 0 0); /* Subtle borders #e0e0e0 */
+  --input: oklch(0.96 0 0); /* Input background */
+  --ring: oklch(0.85 0.15 195); /* Cyan ring for focus states */
+  /* Light mode chart colors with good contrast */
+  --chart-1: oklch(0.85 0.15 195); /* Cyan - matches logo */
+  --chart-2: oklch(0.5 0.25 265); /* Blue - matches logo */
+  --chart-3: oklch(0.6 0.2 145); /* Green - good contrast */
+  --chart-4: oklch(0.65 0.18 75); /* Orange - warm accent */
+  --chart-5: oklch(0.55 0.22 310); /* Purple - cool accent */
+  --radius: 0.625rem;
+  --sidebar: oklch(0.99 0 0); /* Very light sidebar */
+  --sidebar-foreground: oklch(0.15 0 0); /* Dark text */
+  --sidebar-primary: oklch(0.85 0.15 195); /* Cyan accent */
+  --sidebar-primary-foreground: oklch(0.15 0 0); /* Dark text on cyan */
+  --sidebar-accent: oklch(0.96 0 0); /* Subtle accent background */
+  --sidebar-accent-foreground: oklch(0.15 0 0); /* Dark text */
+  --sidebar-border: oklch(0.88 0 0); /* Subtle border */
+  --sidebar-ring: oklch(0.85 0.15 195); /* Cyan ring */
+  --font-inter: "Inter", sans-serif;
+  --font-jetbrains-mono: "JetBrains Mono", monospace;
+}
+
+/* Dark mode theme with darker aesthetic */
+.dark {
+  --background: oklch(0.22 0 0); /* #2d2d2d dark gray background */
+  --foreground: oklch(0.95 0 0); /* Light text for readability */
+  --card: oklch(0.27 0 0); /* Slightly lighter card background #3a3a3a */
+  --card-foreground: oklch(0.95 0 0); /* Light text on cards */
+  --popover: oklch(0.27 0 0); /* Match card background */
+  --popover-foreground: oklch(0.95 0 0); /* Light text */
+  --primary: oklch(0.85 0.15 195); /* Cyan from logo #0ce6f0 */
+  --primary-foreground: oklch(0.15 0 0); /* Dark text on cyan */
+  --secondary: oklch(0.33 0 0); /* Medium gray for secondary elements */
+  --secondary-foreground: oklch(0.95 0 0); /* Light text */
+  --muted: oklch(0.3 0 0); /* Muted background */
+  --muted-foreground: oklch(0.65 0 0); /* Muted text */
+  --accent: oklch(0.5 0.25 265); /* Blue from logo #2256f7 */
+  --accent-foreground: oklch(0.95 0 0); /* Light text on blue */
+  --destructive: oklch(0.55 0.22 25); /* Red for destructive actions */
+  --destructive-foreground: oklch(0.95 0 0); /* Light text on red */
+  --border: oklch(0.35 0 0); /* Subtle borders #4a4a3a */
+  --input: oklch(0.3 0 0); /* Input background */
+  --ring: oklch(0.85 0.15 195); /* Cyan ring for focus states */
+  /* Dark mode chart colors for better contrast on dark background */
+  --chart-1: oklch(0.85 0.15 195); /* Cyan - matches logo */
+  --chart-2: oklch(0.5 0.25 265); /* Blue - matches logo */
+  --chart-3: oklch(0.7 0.2 145); /* Green - good contrast */
+  --chart-4: oklch(0.75 0.18 75); /* Orange - warm accent */
+  --chart-5: oklch(0.65 0.22 310); /* Purple - cool accent */
+  --sidebar: oklch(0.25 0 0); /* Slightly lighter than background */
+  --sidebar-foreground: oklch(0.95 0 0); /* Light text */
+  --sidebar-primary: oklch(0.85 0.15 195); /* Cyan accent */
+  --sidebar-primary-foreground: oklch(0.15 0 0); /* Dark text on cyan */
+  --sidebar-accent: oklch(0.3 0 0); /* Subtle accent background */
+  --sidebar-accent-foreground: oklch(0.95 0 0); /* Light text */
+  --sidebar-border: oklch(0.35 0 0); /* Subtle border */
+  --sidebar-ring: oklch(0.85 0.15 195); /* Cyan ring */
+}
+
+@theme inline {
+  /* Updated font variables to match Inter and JetBrains Mono */
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains-mono);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+/* Adding custom keyframe animations for loading states */
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.95);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(0.95);
+    opacity: 1;
+  }
+}
+
+@keyframes bounce-dot {
+  0%,
+  80%,
+  100% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Adding utility classes for custom animations */
+@layer utilities {
+  .animate-shimmer {
+    animation: shimmer 2s infinite linear;
+    background: linear-gradient(to right, transparent 0%, rgba(var(--primary) / 0.1) 50%, transparent 100%);
+    background-size: 1000px 100%;
+  }
+
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  .animate-pulse-ring {
+    animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  .animate-bounce-dot {
+    animation: bounce-dot 1.4s infinite ease-in-out;
+  }
+
+  .animate-bounce-dot-delay-1 {
+    animation: bounce-dot 1.4s infinite ease-in-out;
+    animation-delay: -0.32s;
+  }
+
+  .animate-bounce-dot-delay-2 {
+    animation: bounce-dot 1.4s infinite ease-in-out;
+    animation-delay: -0.16s;
+  }
+
+  .animate-spin-slow {
+    animation: spin-slow 3s linear infinite;
+  }
+}
