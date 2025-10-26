@@ -6,13 +6,15 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Search, SlidersHorizontal, X } from "lucide-react"
+import { Search, SlidersHorizontal, X, Building2, Home } from "lucide-react"
 import { useState, useEffect } from "react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import type { Location } from "@/lib/types/database"
 
 interface PropertyFiltersProps {
   onFilterChange: (filters: FilterState) => void
+  viewMode?: "units" | "properties"
+  onViewModeChange?: (mode: "units" | "properties") => void
 }
 
 export interface FilterState {
@@ -26,7 +28,7 @@ export interface FilterState {
   availableDateEnd: string
 }
 
-export function PropertyFilters({ onFilterChange }: PropertyFiltersProps) {
+export function PropertyFilters({ onFilterChange, viewMode = "units", onViewModeChange }: PropertyFiltersProps) {
   const [filters, setFilters] = useState<FilterState>({
     search: "",
     locationId: "all",
@@ -102,11 +104,32 @@ export function PropertyFilters({ onFilterChange }: PropertyFiltersProps) {
   return (
     <Card className="p-4">
       <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-2 pb-2 border-b">
+          <Button
+            variant={viewMode === "units" ? "default" : "outline"}
+            size="sm"
+            onClick={() => onViewModeChange?.("units")}
+            className={viewMode === "units" ? "bg-[#3B82F6] hover:bg-[#2563EB]" : ""}
+          >
+            <Home className="mr-2 h-4 w-4" />
+            Units
+          </Button>
+          <Button
+            variant={viewMode === "properties" ? "default" : "outline"}
+            size="sm"
+            onClick={() => onViewModeChange?.("properties")}
+            className={viewMode === "properties" ? "bg-[#3B82F6] hover:bg-[#2563EB]" : ""}
+          >
+            <Building2 className="mr-2 h-4 w-4" />
+            Properties
+          </Button>
+        </div>
+
         <div className="flex flex-col gap-4 md:flex-row md:items-center">
           <div className="relative flex-1 md:max-w-sm">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search properties..."
+              placeholder={viewMode === "units" ? "Search units..." : "Search properties..."}
               className="pl-9"
               value={filters.search}
               onChange={(e) => updateFilters({ search: e.target.value })}
@@ -161,8 +184,8 @@ export function PropertyFilters({ onFilterChange }: PropertyFiltersProps) {
               <PopoverContent className="w-80" align="end">
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <h4 className="font-medium leading-none">Filter Properties</h4>
-                    <p className="text-sm text-muted-foreground">Refine your property search</p>
+                    <h4 className="font-medium leading-none">Filter {viewMode === "units" ? "Units" : "Properties"}</h4>
+                    <p className="text-sm text-muted-foreground">Refine your search</p>
                   </div>
 
                   <div className="space-y-4">
@@ -256,7 +279,7 @@ export function PropertyFilters({ onFilterChange }: PropertyFiltersProps) {
                       </div>
                       {filters.availableDateStart && filters.availableDateEnd && (
                         <p className="text-xs text-muted-foreground">
-                          Showing properties available from {new Date(filters.availableDateStart).toLocaleDateString()}{" "}
+                          Showing {viewMode} available from {new Date(filters.availableDateStart).toLocaleDateString()}{" "}
                           to {new Date(filters.availableDateEnd).toLocaleDateString()}
                         </p>
                       )}

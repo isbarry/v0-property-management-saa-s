@@ -2,94 +2,119 @@
 
 import { useEffect, useState } from "react"
 import { PropertyGrid } from "@/components/properties/property-grid"
+import { BuildingGrid } from "@/components/properties/building-grid"
 import { PropertyDialog } from "@/components/properties/property-dialog"
 import { PropertyFilters, type FilterState } from "@/components/properties/property-filters"
 import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
 import { MinimumLoadingWrapper } from "@/components/ui/minimum-loading-wrapper"
 import type { Property } from "@/lib/types/database"
+import type { BuildingData } from "@/components/properties/building-card"
 
 export default function PropertiesPage() {
+  const [viewMode, setViewMode] = useState<"units" | "properties">("units")
   const [allProperties, setAllProperties] = useState<Property[]>([])
   const [filteredProperties, setFilteredProperties] = useState<Property[]>([])
+  const [allBuildings, setAllBuildings] = useState<BuildingData[]>([])
+  const [filteredBuildings, setFilteredBuildings] = useState<BuildingData[]>([])
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
 
-  const fetchProperties = async () => {
+  const fetchData = async () => {
     try {
-      console.log("[v0] Fetching properties...")
-      const res = await fetch("/api/properties")
-      console.log("[v0] Response status:", res.status)
+      console.log("[v0] Fetching data for view mode:", viewMode)
 
-      const data = await res.json()
-      console.log("[v0] Response data:", data)
-      console.log(`[v0] Loaded ${data.properties?.length || 0} properties`)
-
-      // if (res.status === 401) {
-      //   console.error("[v0] Unauthorized - user not logged in")
-      //   window.location.href = "/sign-in"
-      //   return
-      // }
-
-      setAllProperties(data.properties || [])
-      setFilteredProperties(data.properties || [])
+      if (viewMode === "units") {
+        const res = await fetch("/api/properties")
+        const data = await res.json()
+        console.log(`[v0] Loaded ${data.properties?.length || 0} units`)
+        setAllProperties(data.properties || [])
+        setFilteredProperties(data.properties || [])
+      } else {
+        const res = await fetch("/api/buildings/aggregated")
+        const data = await res.json()
+        console.log(`[v0] Loaded ${data.buildings?.length || 0} buildings`)
+        setAllBuildings(data.buildings || [])
+        setFilteredBuildings(data.buildings || [])
+      }
     } catch (error) {
-      console.error("[v0] Error fetching properties:", error)
+      console.error("[v0] Error fetching data:", error)
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    fetchProperties()
-  }, [])
+    setLoading(true)
+    fetchData()
+  }, [viewMode])
 
   const handleFilterChange = (filters: FilterState) => {
     console.log("[v0] Applying filters:", filters)
 
-    let filtered = [...allProperties]
+    if (viewMode === "units") {
+      let filtered = [...allProperties]
 
-    if (filters.search) {
-      const searchLower = filters.search.toLowerCase()
-      filtered = filtered.filter(
-        (p) =>
-          p.unit_name.toLowerCase().includes(searchLower) ||
-          (p.location && p.location.toLowerCase().includes(searchLower)),
-      )
+      if (filters.search) {
+        const searchLower = filters.search.toLowerCase()
+        filtered = filtered.filter(
+          (p) =>
+            p.unit_name.toLowerCase().includes(searchLower) ||
+            (p.location && p.location.toLowerCase().includes(searchLower)),
+        )
+      }
+
+      if (filters.locationId !== "all") {
+        const locationId = Number.parseInt(filters.locationId)
+        filtered = filtered.filter((p) => p.location_id === locationId)
+      }
+
+      if (filters.propertyType !== "all") {
+        filtered = filtered.filter((p) => p.property_type === filters.propertyType)
+      }
+
+      if (filters.bedrooms !== "all") {
+        const minBedrooms = Number.parseInt(filters.bedrooms)
+        filtered = filtered.filter((p) => p.bedrooms && p.bedrooms >= minBedrooms)
+      }
+
+      if (filters.bathrooms !== "all") {
+        const minBathrooms = Number.parseInt(filters.bathrooms)
+        filtered = filtered.filter((p) => p.bathrooms && p.bathrooms >= minBathrooms)
+      }
+
+      if (filters.amenities.length > 0) {
+        filtered = filtered.filter((p) => {
+          const propertyAmenities = p.amenities || []
+          return filters.amenities.every((amenity) => propertyAmenities.includes(amenity))
+        })
+      }
+
+      console.log(`[v0] Filtered ${filtered.length} units from ${allProperties.length}`)
+      setFilteredProperties(filtered)
+    } else {
+      let filtered = [...allBuildings]
+
+      if (filters.search) {
+        const searchLower = filters.search.toLowerCase()
+        filtered = filtered.filter(
+          (b) =>
+            b.name.toLowerCase().includes(searchLower) ||
+            (b.location && b.location.toLowerCase().includes(searchLower)),
+        )
+      }
+
+      if (filters.propertyType !== "all") {
+        filtered = filtered.filter((b) => b.property_type === filters.propertyType)
+      }
+
+      console.log(`[v0] Filtered ${filtered.length} buildings from ${allBuildings.length}`)
+      setFilteredBuildings(filtered)
     }
-
-    if (filters.locationId !== "all") {
-      const locationId = Number.parseInt(filters.locationId)
-      filtered = filtered.filter((p) => p.location_id === locationId)
-    }
-
-    if (filters.propertyType !== "all") {
-      filtered = filtered.filter((p) => p.property_type === filters.propertyType)
-    }
-
-    if (filters.bedrooms !== "all") {
-      const minBedrooms = Number.parseInt(filters.bedrooms)
-      filtered = filtered.filter((p) => p.bedrooms && p.bedrooms >= minBedrooms)
-    }
-
-    if (filters.bathrooms !== "all") {
-      const minBathrooms = Number.parseInt(filters.bathrooms)
-      filtered = filtered.filter((p) => p.bathrooms && p.bathrooms >= minBathrooms)
-    }
-
-    if (filters.amenities.length > 0) {
-      filtered = filtered.filter((p) => {
-        const propertyAmenities = p.amenities || []
-        return filters.amenities.every((amenity) => propertyAmenities.includes(amenity))
-      })
-    }
-
-    console.log(`[v0] Filtered ${filtered.length} properties from ${allProperties.length}`)
-    setFilteredProperties(filtered)
   }
 
-  const handlePropertyAdded = () => {
-    fetchProperties()
+  const handleDataUpdated = () => {
+    fetchData()
   }
 
   const propertiesSkeleton = (
@@ -112,7 +137,7 @@ export default function PropertiesPage() {
         </div>
       </div>
 
-      {/* Property grid skeleton */}
+      {/* Grid skeleton */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {[...Array(6)].map((_, i) => (
           <div key={i} className="rounded-lg border border-border bg-card overflow-hidden">
@@ -135,6 +160,9 @@ export default function PropertiesPage() {
     return propertiesSkeleton
   }
 
+  const displayCount = viewMode === "units" ? filteredProperties.length : filteredBuildings.length
+  const totalCount = viewMode === "units" ? allProperties.length : allBuildings.length
+
   return (
     <MinimumLoadingWrapper minimumMs={1000} loadingContent={propertiesSkeleton}>
       <div className="mx-auto max-w-7xl space-y-6 p-6" data-onboarding="properties-page">
@@ -142,7 +170,7 @@ export default function PropertiesPage() {
           <div>
             <h1 className="font-sans text-3xl font-bold tracking-tight text-foreground">Properties</h1>
             <p className="text-sm text-muted-foreground">
-              Manage your property portfolio ({filteredProperties.length} of {allProperties.length})
+              Manage your property portfolio ({displayCount} of {totalCount} {viewMode})
             </p>
           </div>
           <Button
@@ -155,11 +183,15 @@ export default function PropertiesPage() {
           </Button>
         </div>
 
-        <PropertyFilters onFilterChange={handleFilterChange} />
+        <PropertyFilters onFilterChange={handleFilterChange} viewMode={viewMode} onViewModeChange={setViewMode} />
 
-        <PropertyGrid properties={filteredProperties} onUpdate={handlePropertyAdded} />
+        {viewMode === "units" ? (
+          <PropertyGrid properties={filteredProperties} onUpdate={handleDataUpdated} />
+        ) : (
+          <BuildingGrid buildings={filteredBuildings} onUpdate={handleDataUpdated} />
+        )}
 
-        <PropertyDialog open={dialogOpen} onClose={() => setDialogOpen(false)} onSuccess={handlePropertyAdded} />
+        <PropertyDialog open={dialogOpen} onClose={() => setDialogOpen(false)} onSuccess={handleDataUpdated} />
       </div>
     </MinimumLoadingWrapper>
   )

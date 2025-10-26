@@ -73,8 +73,8 @@ export function SidebarNavigation() {
                   onClick={() => toggleSubmenu(item.href)}
                   className={cn(
                     "flex w-full items-center justify-between gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
-                    "text-foreground hover:bg-accent hover:text-accent-foreground",
-                    pathname.startsWith(item.href) && "text-foreground",
+                    "text-black hover:bg-accent hover:text-black",
+                    pathname.startsWith(item.href) && "text-black",
                   )}
                 >
                   <div className="flex items-center gap-3">
@@ -90,8 +90,8 @@ export function SidebarNavigation() {
                   href={item.href}
                   className={cn(
                     "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
-                    "text-foreground hover:bg-accent hover:text-accent-foreground",
-                    isActive && "text-foreground",
+                    "text-black hover:bg-accent hover:text-black",
+                    isActive && "text-black",
                   )}
                 >
                   <Icon className="h-5 w-5" />
@@ -116,7 +116,7 @@ export function SidebarNavigation() {
                           href={subItem.href}
                           className={cn(
                             "rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                            "text-foreground hover:bg-accent hover:text-accent-foreground",
+                            "text-black hover:bg-accent hover:text-black",
                           )}
                         >
                           {subItem.label}

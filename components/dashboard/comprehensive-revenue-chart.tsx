@@ -1,27 +1,26 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import React from "react"
+
+import { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts"
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
-import { ChevronDown } from "lucide-react"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { cn } from "@/lib/utils"
 import type { MonthlyRevenue, Property } from "@/lib/types"
 
 interface ComprehensiveRevenueChartProps {
   data: MonthlyRevenue[]
   properties: Property[]
-  onReady?: () => void // Added onReady callback prop
+  onReady?: () => void
 }
 
 const PROPERTY_COLORS = [
-  { realized: "#60A5FA", future: "rgba(96, 165, 250, 0.4)", border: "#3B82F6" }, // Bright blue
-  { realized: "#34D399", future: "rgba(52, 211, 153, 0.4)", border: "#10B981" }, // Emerald green
-  { realized: "#F472B6", future: "rgba(244, 114, 182, 0.4)", border: "#EC4899" }, // Pink
-  { realized: "#FBBF24", future: "rgba(251, 191, 36, 0.4)", border: "#F59E0B" }, // Amber
-  { realized: "#A78BFA", future: "rgba(167, 139, 250, 0.4)", border: "#8B5CF6" }, // Purple
-  { realized: "#FB923C", future: "rgba(251, 146, 60, 0.4)", border: "#F97316" }, // Orange
+  { realized: "#60A5FA", future: "rgba(96, 165, 250, 0.4)", border: "#3B82F6" },
+  { realized: "#34D399", future: "rgba(52, 211, 153, 0.4)", border: "#10B981" },
+  { realized: "#F472B6", future: "rgba(244, 114, 182, 0.4)", border: "#EC4899" },
+  { realized: "#FBBF24", future: "rgba(251, 191, 36, 0.4)", border: "#F59E0B" },
+  { realized: "#A78BFA", future: "rgba(167, 139, 250, 0.4)", border: "#8B5CF6" },
+  { realized: "#FB923C", future: "rgba(251, 146, 60, 0.4)", border: "#F97316" },
 ]
 
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -49,20 +48,77 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 export function ComprehensiveRevenueChart({ data, properties, onReady }: ComprehensiveRevenueChartProps) {
   const [dateRange, setDateRange] = useState("ytd")
-  const [selectedProperties, setSelectedProperties] = useState<string[]>(["all"])
+  const [selectedBuilding, setSelectedBuilding] = useState<string | null>(null)
+  const [selectedUnits, setSelectedUnits] = useState<Set<number>>(new Set())
   const hasCalledReady = useRef(false)
 
-  const uniqueProperties = properties.reduce((acc, property) => {
-    const existingProperty = acc.find((p) => p.name === property.name)
-    if (!existingProperty) {
-      acc.push(property)
-    }
-    return acc
-  }, [] as Property[])
+  const buildingGroups = useMemo(() => {
+    const groups = new Map<string, Property[]>()
+    properties.forEach((property) => {
+      const buildingName = property.property_name || property.unit_name
+      if (!groups.has(buildingName)) {
+        groups.set(buildingName, [])
+      }
+      groups.get(buildingName)?.push(property)
+    })
+    return groups
+  }, [properties])
 
-  const getPropertyIdsByName = (propertyName: string) => {
-    return properties.filter((p) => p.name === propertyName).map((p) => p.id)
-  }
+  useEffect(() => {
+    if (properties.length > 0 && selectedUnits.size === 0) {
+      const allUnitIds = new Set<number>()
+      properties.forEach((p) => allUnitIds.add(p.id))
+      setSelectedUnits(allUnitIds)
+    }
+  }, [properties])
+
+  const toggleBuilding = useCallback(
+    (buildingName: string) => {
+      if (selectedBuilding === buildingName) {
+        setSelectedBuilding(null)
+        setSelectedUnits(new Set())
+      } else {
+        const buildingUnits = buildingGroups.get(buildingName) || []
+        const buildingUnitIds = new Set(buildingUnits.map((u) => u.id))
+        setSelectedBuilding(buildingName)
+        setSelectedUnits(buildingUnitIds)
+      }
+    },
+    [selectedBuilding, buildingGroups],
+  )
+
+  const toggleUnit = useCallback(
+    (unitId: number) => {
+      const newSelectedUnits = new Set(selectedUnits)
+      if (newSelectedUnits.has(unitId)) {
+        newSelectedUnits.delete(unitId)
+      } else {
+        newSelectedUnits.add(unitId)
+      }
+      setSelectedUnits(newSelectedUnits)
+
+      if (selectedBuilding) {
+        const buildingUnits = buildingGroups.get(selectedBuilding) || []
+        const allUnitsSelected = buildingUnits.every((unit) => newSelectedUnits.has(unit.id))
+        if (!allUnitsSelected) {
+          setSelectedBuilding(null)
+        }
+      }
+    },
+    [selectedUnits, selectedBuilding, buildingGroups],
+  )
+
+  const selectAllProperties = useCallback(() => {
+    if (selectedUnits.size === properties.length) {
+      setSelectedUnits(new Set())
+      setSelectedBuilding(null)
+    } else {
+      const allUnitIds = new Set<number>()
+      properties.forEach((p) => allUnitIds.add(p.id))
+      setSelectedUnits(allUnitIds)
+      setSelectedBuilding(null)
+    }
+  }, [properties, selectedUnits])
 
   const FilterButton = ({ value, label, active }: { value: string; label: string; active: boolean }) => (
     <button
@@ -77,50 +133,15 @@ export function ComprehensiveRevenueChart({ data, properties, onReady }: Compreh
     </button>
   )
 
-  const toggleProperty = (propertyId: string) => {
-    if (propertyId === "all") {
-      setSelectedProperties(["all"])
-    } else {
-      setSelectedProperties((prev) => {
-        const filtered = prev.filter((id) => id !== "all")
-        if (filtered.includes(propertyId)) {
-          const newSelection = filtered.filter((id) => id !== propertyId)
-          return newSelection.length === 0 ? ["all"] : newSelection
-        } else {
-          return [...filtered, propertyId]
-        }
-      })
-    }
-  }
-
-  const clearSelection = () => {
-    setSelectedProperties(["all"])
-  }
-
-  const getDisplayText = () => {
-    if (selectedProperties.includes("all")) {
-      return "All Properties"
-    }
-    if (selectedProperties.length === 1) {
-      const property = uniqueProperties.find((p) => String(p.id) === selectedProperties[0])
-      return property?.name || "Select Properties"
-    }
-    return `${selectedProperties.length} Properties Selected`
-  }
-
   const getFilteredData = () => {
     const now = new Date()
-    const currentMonth = now.getMonth() // 0-11
+    const currentMonth = now.getMonth()
     const currentYear = now.getFullYear()
-
-    console.log("[v0] Revenue Chart - Current date:", now.toISOString())
-    console.log("[v0] Revenue Chart - Date range filter:", dateRange)
 
     const validData = data.filter((item) => item?.month)
 
     switch (dateRange) {
       case "month":
-        // Show only current month
         return validData.filter((item) => {
           const monthParts = item.month?.split(" ")
           if (!monthParts || monthParts.length < 2) return false
@@ -131,7 +152,6 @@ export function ComprehensiveRevenueChart({ data, properties, onReady }: Compreh
         })
 
       case "quarter":
-        // Show current quarter (3 months)
         const quarterStartMonth = Math.floor(currentMonth / 3) * 3
         return validData.filter((item) => {
           const monthParts = item.month?.split(" ")
@@ -153,7 +173,6 @@ export function ComprehensiveRevenueChart({ data, properties, onReady }: Compreh
         })
 
       case "custom":
-        // For now, show all data (would need date picker for true custom range)
         return validData
 
       default:
@@ -164,42 +183,72 @@ export function ComprehensiveRevenueChart({ data, properties, onReady }: Compreh
   const getChartData = () => {
     const filteredData = getFilteredData()
 
-    if (selectedProperties.includes("all")) {
-      // Show aggregate realized vs future
-      return filteredData.map((month) => ({
-        month: month.month,
-        "Realized Revenue": month.realized,
-        "Future Revenue": month.future,
-      }))
-    } else {
-      // Show per-property breakdown
-      return filteredData.map((month) => {
-        const monthData: any = { month: month.month }
-        selectedProperties.forEach((propId) => {
-          const property = uniqueProperties.find((p) => String(p.id) === propId)
-          if (property && month.byProperty) {
-            const propertyIds = getPropertyIdsByName(property.name)
-            let realizedTotal = 0
-            let futureTotal = 0
+    if (selectedBuilding && buildingGroups.get(selectedBuilding)) {
+      const buildingUnits = buildingGroups.get(selectedBuilding) || []
+      const allUnitsSelected = buildingUnits.every((unit) => selectedUnits.has(unit.id))
 
-            propertyIds.forEach((id) => {
-              if (month.byProperty?.[id]) {
-                realizedTotal += month.byProperty[id].realized
-                futureTotal += month.byProperty[id].future
-              }
-            })
-
-            monthData[`${property.name} (Realized)`] = realizedTotal
-            monthData[`${property.name} (Future)`] = futureTotal
+      if (allUnitsSelected) {
+        // Show aggregate for the building
+        return filteredData.map((month) => {
+          let realizedTotal = 0
+          let futureTotal = 0
+          buildingUnits.forEach((unit) => {
+            if (month.byProperty?.[unit.id]) {
+              realizedTotal += month.byProperty[unit.id].realized
+              futureTotal += month.byProperty[unit.id].future
+            }
+          })
+          return {
+            month: month.month,
+            [`${selectedBuilding} (Realized)`]: realizedTotal,
+            [`${selectedBuilding} (Future)`]: futureTotal,
           }
         })
-        return monthData
-      })
+      } else {
+        // Show individual units
+        return filteredData.map((month) => {
+          const monthData: any = { month: month.month }
+          buildingUnits.forEach((unit) => {
+            if (selectedUnits.has(unit.id) && month.byProperty?.[unit.id]) {
+              monthData[`${unit.unit_name} (Realized)`] = month.byProperty[unit.id].realized
+              monthData[`${unit.unit_name} (Future)`] = month.byProperty[unit.id].future
+            }
+          })
+          return monthData
+        })
+      }
+    } else {
+      const allPropertiesSelected = selectedUnits.size === properties.length && properties.length > 0
+
+      if (allPropertiesSelected) {
+        // Show aggregate realized vs future
+        return filteredData.map((month) => ({
+          month: month.month,
+          "Realized Revenue": month.realized,
+          "Future Revenue": month.future,
+        }))
+      } else {
+        // Show selected properties
+        return filteredData.map((month) => {
+          const monthData: any = { month: month.month }
+          properties.forEach((property) => {
+            if (selectedUnits.has(property.id) && month.byProperty?.[property.id]) {
+              monthData[`${property.unit_name || property.property_name} (Realized)`] =
+                month.byProperty[property.id].realized
+              monthData[`${property.unit_name || property.property_name} (Future)`] =
+                month.byProperty[property.id].future
+            }
+          })
+          return monthData
+        })
+      }
     }
   }
 
   const CustomLegend = () => {
-    if (selectedProperties.includes("all")) {
+    const allPropertiesSelected = selectedUnits.size === properties.length && properties.length > 0
+
+    if (allPropertiesSelected) {
       return (
         <div className="flex items-center justify-end gap-6 mb-4">
           <div className="flex items-center gap-2">
@@ -222,27 +271,9 @@ export function ComprehensiveRevenueChart({ data, properties, onReady }: Compreh
           </div>
         </div>
       )
-    } else {
-      return (
-        <div className="flex items-center justify-end gap-4 mb-4 flex-wrap">
-          {selectedProperties.map((propId, index) => {
-            const property = uniqueProperties.find((p) => String(p.id) === propId)
-            const color = PROPERTY_COLORS[index % PROPERTY_COLORS.length]
-            return (
-              <div key={propId} className="flex items-center gap-2">
-                <div
-                  className="w-4 h-4 rounded-sm"
-                  style={{ backgroundColor: color.realized, border: `1px solid ${color.border}` }}
-                />
-                <span className="text-[13px] font-medium" style={{ color: "#E2E8F0" }}>
-                  {property?.name}
-                </span>
-              </div>
-            )
-          })}
-        </div>
-      )
     }
+
+    return null
   }
 
   const chartData = getChartData()
@@ -270,92 +301,88 @@ export function ComprehensiveRevenueChart({ data, properties, onReady }: Compreh
               Revenue Overview
             </CardTitle>
             <p className="text-sm" style={{ color: "#CBD5E1" }}>
-              {selectedProperties.includes("all") ? "Realized vs. Future Revenue" : "Per-Property Revenue Comparison"}
+              {selectedUnits.size === properties.length
+                ? "Realized vs. Future Revenue"
+                : "Per-Property Revenue Comparison"}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center justify-between gap-4 mb-4">
           <div className="flex items-center gap-2">
             <FilterButton value="month" label="Month" active={dateRange === "month"} />
             <FilterButton value="quarter" label="Quarter" active={dateRange === "quarter"} />
             <FilterButton value="ytd" label="YtD" active={dateRange === "ytd"} />
             <FilterButton value="custom" label="Custom" active={dateRange === "custom"} />
           </div>
+        </div>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                className="w-[240px] justify-between border-0 bg-transparent"
-                style={{ backgroundColor: "#334155", color: "#CBD5E1" }}
-              >
-                <span className="truncate">{getDisplayText()}</span>
-                <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              className="w-[240px] p-0"
-              style={{ backgroundColor: "#1E293B", border: "1px solid #334155" }}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm" style={{ color: "#CBD5E1" }}>
+              Filter by property:
+            </p>
+          </div>
+
+          {/* Level 1: Buildings + All Properties */}
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={selectAllProperties}
+              className={cn(
+                "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                selectedUnits.size === properties.length && !selectedBuilding
+                  ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
+                  : "border-gray-300 bg-white text-gray-600 hover:border-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400",
+              )}
             >
-              <div className="p-2 border-b" style={{ borderColor: "#334155" }}>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium" style={{ color: "#E2E8F0" }}>
-                    Select Properties
-                  </span>
-                  {!selectedProperties.includes("all") && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={clearSelection}
-                      className="h-6 px-2 text-xs"
-                      style={{ color: "#60A5FA" }}
-                    >
-                      Clear
-                    </Button>
+              All Properties
+            </button>
+
+            {Array.from(buildingGroups.entries()).map(([buildingName, units]) => {
+              const allUnitsSelected = units.every((unit) => selectedUnits.has(unit.id))
+              const someUnitsSelected = units.some((unit) => selectedUnits.has(unit.id))
+
+              return (
+                <button
+                  key={buildingName}
+                  onClick={() => toggleBuilding(buildingName)}
+                  className={cn(
+                    "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                    allUnitsSelected
+                      ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
+                      : someUnitsSelected
+                        ? "border-blue-300 bg-blue-25 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400"
+                        : "border-gray-300 bg-white text-gray-600 hover:border-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400",
                   )}
-                </div>
-              </div>
-              <div className="max-h-[300px] overflow-y-auto p-2">
-                <div className="flex items-center space-x-2 rounded-md px-2 py-2 hover:bg-slate-700/50">
-                  <Checkbox
-                    id="all"
-                    checked={selectedProperties.includes("all")}
-                    onCheckedChange={() => toggleProperty("all")}
-                  />
-                  <label
-                    htmlFor="all"
-                    className="text-sm font-medium leading-none cursor-pointer flex-1"
-                    style={{ color: "#E2E8F0" }}
-                    onClick={() => toggleProperty("all")}
-                  >
-                    All Properties
-                  </label>
-                </div>
-                <div className="my-2 border-t" style={{ borderColor: "#334155" }} />
-                {uniqueProperties.map((property) => (
-                  <div
-                    key={property.id}
-                    className="flex items-center space-x-2 rounded-md px-2 py-2 hover:bg-slate-700/50"
-                  >
-                    <Checkbox
-                      id={String(property.id)}
-                      checked={selectedProperties.includes(String(property.id))}
-                      onCheckedChange={() => toggleProperty(String(property.id))}
-                    />
-                    <label
-                      htmlFor={String(property.id)}
-                      className="text-sm leading-none cursor-pointer flex-1"
-                      style={{ color: "#E2E8F0" }}
-                      onClick={() => toggleProperty(String(property.id))}
-                    >
-                      {property.name}
-                    </label>
-                  </div>
-                ))}
-              </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                >
+                  {buildingName} ({units.length})
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Level 2: Units (shown when a building is selected) */}
+          {selectedBuilding && buildingGroups.get(selectedBuilding) && (
+            <div className="flex flex-wrap items-center gap-2 border-l-2 border-blue-500 pl-4">
+              <span className="text-xs font-medium" style={{ color: "#CBD5E1" }}>
+                Units:
+              </span>
+              {buildingGroups.get(selectedBuilding)?.map((unit) => (
+                <button
+                  key={unit.id}
+                  onClick={() => toggleUnit(unit.id)}
+                  className={cn(
+                    "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                    selectedUnits.has(unit.id)
+                      ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
+                      : "border-gray-300 bg-white text-gray-600 hover:border-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400",
+                  )}
+                >
+                  {unit.unit_name}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </CardHeader>
 
@@ -389,7 +416,7 @@ export function ComprehensiveRevenueChart({ data, properties, onReady }: Compreh
 
             <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(51, 69, 85, 0.2)" }} />
 
-            {selectedProperties.includes("all") ? (
+            {selectedUnits.size === properties.length && properties.length > 0 ? (
               <>
                 <Bar
                   dataKey="Realized Revenue"
@@ -411,39 +438,33 @@ export function ComprehensiveRevenueChart({ data, properties, onReady }: Compreh
               </>
             ) : (
               <>
-                {selectedProperties.map((propId, index) => {
-                  const property = uniqueProperties.find((p) => String(p.id) === propId)
-                  const color = PROPERTY_COLORS[index % PROPERTY_COLORS.length]
-                  return (
-                    <Bar
-                      key={propId}
-                      dataKey={`${property?.name} (Realized)`}
-                      fill={color.realized}
-                      stroke={color.border}
-                      strokeWidth={1}
-                      radius={[4, 4, 0, 0]}
-                      maxBarSize={20}
-                      stackId={`property-${propId}`}
-                    />
-                  )
-                })}
-                {selectedProperties.map((propId, index) => {
-                  const property = uniqueProperties.find((p) => String(p.id) === propId)
-                  const color = PROPERTY_COLORS[index % PROPERTY_COLORS.length]
-                  return (
-                    <Bar
-                      key={`${propId}-future`}
-                      dataKey={`${property?.name} (Future)`}
-                      fill={color.future}
-                      stroke={color.border}
-                      strokeWidth={1}
-                      strokeDasharray="4 4"
-                      radius={[4, 4, 0, 0]}
-                      maxBarSize={20}
-                      stackId={`property-${propId}`}
-                    />
-                  )
-                })}
+                {Object.keys(chartData[0] || {})
+                  .filter((key) => key !== "month" && key.includes("(Realized)"))
+                  .map((key, index) => {
+                    const color = PROPERTY_COLORS[index % PROPERTY_COLORS.length]
+                    const futureKey = key.replace("(Realized)", "(Future)")
+                    return (
+                      <React.Fragment key={key}>
+                        <Bar
+                          dataKey={key}
+                          fill={color.realized}
+                          stroke={color.border}
+                          strokeWidth={1}
+                          radius={[4, 4, 0, 0]}
+                          maxBarSize={20}
+                        />
+                        <Bar
+                          dataKey={futureKey}
+                          fill={color.future}
+                          stroke={color.border}
+                          strokeWidth={1}
+                          strokeDasharray="4 4"
+                          radius={[4, 4, 0, 0]}
+                          maxBarSize={20}
+                        />
+                      </React.Fragment>
+                    )
+                  })}
               </>
             )}
           </BarChart>

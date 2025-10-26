@@ -5,7 +5,7 @@
 
 /* Light mode theme (default) with bright, clean aesthetic using logo colors */
 :root {
-  --background: oklch(0.98 0 0); /* Almost white background #fafafa */
+  --background: oklch(1 0 0); /* Pure white background #ffffff */
   --foreground: oklch(0.15 0 0); /* Dark text for readability */
   --card: oklch(1 0 0); /* Pure white cards */
   --card-foreground: oklch(0.15 0 0); /* Dark text on cards */
