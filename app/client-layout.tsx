@@ -1,7 +1,8 @@
 "use client"
 
 import type React from "react"
-import { Navigation } from "@/components/navigation"
+import { TopNavigation } from "@/components/top-navigation"
+import { SidebarNavigation } from "@/components/sidebar-navigation"
 import { Suspense, useState, useEffect } from "react"
 import { usePathname } from "next/navigation"
 import { Toaster } from "@/components/ui/toaster"
@@ -35,8 +36,17 @@ export default function ClientLayout({
 
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      {showNavigation && <Navigation theme={theme} onToggleTheme={toggleTheme} />}
-      <main className="min-h-screen bg-background">{children}</main>
+      {showNavigation ? (
+        <div className="flex h-screen flex-col overflow-hidden">
+          <TopNavigation theme={theme} onToggleTheme={toggleTheme} />
+          <div className="flex flex-1 overflow-hidden">
+            <SidebarNavigation />
+            <main className="ml-64 flex-1 overflow-y-auto bg-background">{children}</main>
+          </div>
+        </div>
+      ) : (
+        <main className="min-h-screen bg-background">{children}</main>
+      )}
       <Toaster />
     </Suspense>
   )

@@ -6,17 +6,19 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Eye, EyeOff } from "lucide-react"
+import { Eye, EyeOff, ArrowLeft } from "lucide-react"
+import { Checkbox } from "@/components/ui/checkbox"
 
 export function AuthForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [showForgotPassword, setShowForgotPassword] = useState(false)
+  const [showSignUp, setShowSignUp] = useState(false)
   const [showSignInPassword, setShowSignInPassword] = useState(false)
   const [showSignUpPassword, setShowSignUpPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
 
   const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -33,14 +35,16 @@ export function AuthForm() {
       email,
       password: password ? "***" + password.slice(-3) : "EMPTY",
       passwordLength: password?.length || 0,
+      rememberMe,
     })
 
     try {
-      const requestBody = { email, password }
+      const requestBody = { email, password, rememberMe }
       console.log("[v0] Request body being sent:", {
         email: requestBody.email,
         hasPassword: !!requestBody.password,
         passwordLength: requestBody.password?.length || 0,
+        rememberMe: requestBody.rememberMe,
       })
 
       const response = await fetch("/api/auth/login", {
@@ -152,204 +156,295 @@ export function AuthForm() {
     }
   }
 
-  return (
-    <>
-      <Tabs defaultValue="signin" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 bg-[#3a3a3a] border border-[#4a4a4a]">
-          <TabsTrigger
-            value="signin"
-            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#0ce6f0] data-[state=active]:to-[#2256f7] data-[state=active]:text-white text-gray-400"
-          >
-            Sign In
-          </TabsTrigger>
-          <TabsTrigger
-            value="signup"
-            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#0ce6f0] data-[state=active]:to-[#2256f7] data-[state=active]:text-white text-gray-400"
-          >
-            Sign Up
-          </TabsTrigger>
-        </TabsList>
+  if (showForgotPassword) {
+    return (
+      <Card className="bg-white border-gray-200 text-gray-900">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => {
+                setShowForgotPassword(false)
+                setError("")
+                setSuccess("")
+              }}
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <CardTitle className="text-gray-900">Reset Password</CardTitle>
+          </div>
+          <CardDescription className="text-gray-600">
+            Enter your email address and we'll send you instructions to reset your password
+          </CardDescription>
+        </CardHeader>
+        <form onSubmit={handleForgotPassword}>
+          <CardContent className="space-y-4">
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            {success && (
+              <Alert>
+                <AlertDescription>{success}</AlertDescription>
+              </Alert>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="forgot-email" className="text-gray-700">
+                Email
+              </Label>
+              <Input
+                id="forgot-email"
+                name="email"
+                type="email"
+                placeholder="you@example.com"
+                required
+                disabled={isLoading}
+                className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-400"
+              />
+            </div>
+          </CardContent>
+          <CardFooter className="flex flex-col gap-2">
+            <Button
+              type="submit"
+              className="w-full bg-gradient-to-r from-[#0ce6f0] to-[#2256f7] hover:from-[#0bd4de] hover:to-[#1e4ad9] text-white"
+              disabled={isLoading}
+            >
+              {isLoading ? "Sending..." : "Send Reset Instructions"}
+            </Button>
+          </CardFooter>
+        </form>
+      </Card>
+    )
+  }
 
-        <TabsContent value="signin">
-          <Card className="bg-[#3a3a3a] border-[#4a4a4a] text-white">
-            <CardHeader>
-              <CardTitle className="text-white">Sign In</CardTitle>
-              <CardDescription className="text-gray-400">Enter your credentials to access your account</CardDescription>
-            </CardHeader>
-            <form onSubmit={handleSignIn}>
-              <CardContent className="space-y-4">
-                {error && (
-                  <Alert variant="destructive">
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
-                {success && (
-                  <Alert>
-                    <AlertDescription>{success}</AlertDescription>
-                  </Alert>
-                )}
-                <div className="space-y-2">
-                  <Label htmlFor="signin-email" className="text-gray-300">
-                    Email
-                  </Label>
+  if (showSignUp) {
+    return (
+      <>
+        <Card className="bg-white border-gray-200 text-gray-900">
+          <CardHeader>
+            <CardTitle className="text-gray-900">Create Account</CardTitle>
+            <CardDescription className="text-gray-600">Enter your details to create a new account</CardDescription>
+          </CardHeader>
+          <form onSubmit={handleSignUp}>
+            <CardContent className="space-y-4">
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+              {success && (
+                <Alert>
+                  <AlertDescription>{success}</AlertDescription>
+                </Alert>
+              )}
+              <div className="space-y-2">
+                <Label htmlFor="signup-name" className="text-gray-700">
+                  Full Name
+                </Label>
+                <Input
+                  id="signup-name"
+                  name="fullName"
+                  type="text"
+                  placeholder="John Doe"
+                  required
+                  disabled={isLoading}
+                  className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-400"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="signup-email" className="text-gray-700">
+                  Email
+                </Label>
+                <Input
+                  id="signup-email"
+                  name="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  required
+                  disabled={isLoading}
+                  className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-400"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="signup-password" className="text-gray-700">
+                  Password
+                </Label>
+                <div className="relative">
                   <Input
-                    id="signin-email"
-                    name="email"
-                    type="email"
-                    placeholder="test@propertymanager.com"
+                    id="signup-password"
+                    name="password"
+                    type={showSignUpPassword ? "text" : "password"}
+                    placeholder="••••••••"
                     required
                     disabled={isLoading}
-                    className="bg-[#2d2d2d] border-[#4a4a4a] text-white placeholder:text-gray-500"
+                    minLength={8}
+                    className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-400 pr-10"
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signin-password" className="text-gray-300">
-                    Password
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="signin-password"
-                      name="password"
-                      type={showSignInPassword ? "text" : "password"}
-                      placeholder="••••••••"
-                      required
-                      disabled={isLoading}
-                      className="bg-[#2d2d2d] border-[#4a4a4a] text-white placeholder:text-gray-500 pr-10"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                      onClick={() => setShowSignInPassword(!showSignInPassword)}
-                      disabled={isLoading}
-                    >
-                      {showSignInPassword ? (
-                        <EyeOff className="h-4 w-4 text-gray-400" />
-                      ) : (
-                        <Eye className="h-4 w-4 text-gray-400" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-                <div className="flex justify-end">
                   <Button
                     type="button"
-                    variant="link"
-                    className="h-auto p-0 text-sm text-[#0ce6f0] hover:text-[#2256f7]"
-                    onClick={() => setShowForgotPassword(true)}
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => setShowSignUpPassword(!showSignUpPassword)}
+                    disabled={isLoading}
                   >
-                    Forgot password?
+                    {showSignUpPassword ? (
+                      <EyeOff className="h-4 w-4 text-gray-500" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-gray-500" />
+                    )}
                   </Button>
                 </div>
-              </CardContent>
-              <CardFooter className="mt-6">
-                <Button
-                  type="submit"
-                  className="w-full bg-gradient-to-r from-[#0ce6f0] to-[#2256f7] hover:from-[#0bd4de] hover:to-[#1e4ad9] text-white"
-                  disabled={isLoading}
-                >
-                  {isLoading ? "Signing in..." : "Sign In"}
-                </Button>
-              </CardFooter>
-            </form>
-          </Card>
-        </TabsContent>
+                <p className="text-xs text-gray-500">
+                  Must be at least 8 characters with uppercase, lowercase, and number
+                </p>
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button
+                type="submit"
+                className="w-full bg-gradient-to-r from-[#0ce6f0] to-[#2256f7] hover:from-[#0bd4de] hover:to-[#1e4ad9] text-white"
+                disabled={isLoading}
+              >
+                {isLoading ? "Creating account..." : "Create Account"}
+              </Button>
+            </CardFooter>
+          </form>
+        </Card>
+        <div className="mt-4 text-center">
+          <Button
+            type="button"
+            variant="link"
+            className="text-gray-600 hover:text-gray-900"
+            onClick={() => {
+              setShowSignUp(false)
+              setError("")
+              setSuccess("")
+            }}
+          >
+            Already have an account? Sign in
+          </Button>
+        </div>
+      </>
+    )
+  }
 
-        <TabsContent value="signup">
-          <Card className="bg-[#3a3a3a] border-[#4a4a4a] text-white">
-            <CardHeader>
-              <CardTitle className="text-white">Create Account</CardTitle>
-              <CardDescription className="text-gray-400">Enter your details to create a new account</CardDescription>
-            </CardHeader>
-            <form onSubmit={handleSignUp}>
-              <CardContent className="space-y-4">
-                {error && (
-                  <Alert variant="destructive">
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
-                {success && (
-                  <Alert>
-                    <AlertDescription>{success}</AlertDescription>
-                  </Alert>
-                )}
-                <div className="space-y-2">
-                  <Label htmlFor="signup-name" className="text-gray-300">
-                    Full Name
-                  </Label>
-                  <Input
-                    id="signup-name"
-                    name="fullName"
-                    type="text"
-                    placeholder="John Doe"
-                    required
-                    disabled={isLoading}
-                    className="bg-[#2d2d2d] border-[#4a4a4a] text-white placeholder:text-gray-500"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email" className="text-gray-300">
-                    Email
-                  </Label>
-                  <Input
-                    id="signup-email"
-                    name="email"
-                    type="email"
-                    placeholder="you@example.com"
-                    required
-                    disabled={isLoading}
-                    className="bg-[#2d2d2d] border-[#4a4a4a] text-white placeholder:text-gray-500"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password" className="text-gray-300">
-                    Password
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="signup-password"
-                      name="password"
-                      type={showSignUpPassword ? "text" : "password"}
-                      placeholder="••••••••"
-                      required
-                      disabled={isLoading}
-                      minLength={8}
-                      className="bg-[#2d2d2d] border-[#4a4a4a] text-white placeholder:text-gray-500 pr-10"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                      onClick={() => setShowSignUpPassword(!showSignUpPassword)}
-                      disabled={isLoading}
-                    >
-                      {showSignUpPassword ? (
-                        <EyeOff className="h-4 w-4 text-gray-400" />
-                      ) : (
-                        <Eye className="h-4 w-4 text-gray-400" />
-                      )}
-                    </Button>
-                  </div>
-                  <p className="text-xs text-gray-500">
-                    Must be at least 8 characters with uppercase, lowercase, and number
-                  </p>
-                </div>
-              </CardContent>
-              <CardFooter>
+  return (
+    <>
+      <Card className="bg-white border-gray-200 text-gray-900">
+        <CardHeader>
+          <CardTitle className="text-gray-900">Sign In</CardTitle>
+          <CardDescription className="text-gray-600">Enter your credentials to access your account</CardDescription>
+        </CardHeader>
+        <form onSubmit={handleSignIn}>
+          <CardContent className="space-y-4">
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            {success && (
+              <Alert>
+                <AlertDescription>{success}</AlertDescription>
+              </Alert>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="signin-email" className="text-gray-700">
+                Email
+              </Label>
+              <Input
+                id="signin-email"
+                name="email"
+                type="email"
+                placeholder="test@propertymanager.com"
+                required
+                disabled={isLoading}
+                className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-400"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="signin-password" className="text-gray-700">
+                Password
+              </Label>
+              <div className="relative">
+                <Input
+                  id="signin-password"
+                  name="password"
+                  type={showSignInPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  required
+                  disabled={isLoading}
+                  className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-400 pr-10"
+                />
                 <Button
-                  type="submit"
-                  className="w-full bg-gradient-to-r from-[#0ce6f0] to-[#2256f7] hover:from-[#0bd4de] hover:to-[#1e4ad9] text-white"
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                  onClick={() => setShowSignInPassword(!showSignInPassword)}
                   disabled={isLoading}
                 >
-                  {isLoading ? "Creating account..." : "Create Account"}
+                  {showSignInPassword ? (
+                    <EyeOff className="h-4 w-4 text-gray-500" />
+                  ) : (
+                    <Eye className="h-4 w-4 text-gray-500" />
+                  )}
                 </Button>
-              </CardFooter>
-            </form>
-          </Card>
-        </TabsContent>
-      </Tabs>
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="remember-me"
+                  checked={rememberMe}
+                  onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                  disabled={isLoading}
+                />
+                <label htmlFor="remember-me" className="text-sm text-gray-700 cursor-pointer select-none">
+                  Remember me
+                </label>
+              </div>
+              <Button
+                type="button"
+                variant="link"
+                className="h-auto p-0 text-sm text-[#0ce6f0] hover:text-[#2256f7]"
+                onClick={() => setShowForgotPassword(true)}
+              >
+                Forgot password?
+              </Button>
+            </div>
+          </CardContent>
+          <CardFooter className="mt-6">
+            <Button
+              type="submit"
+              className="w-full bg-gradient-to-r from-[#0ce6f0] to-[#2256f7] hover:from-[#0bd4de] hover:to-[#1e4ad9] text-white"
+              disabled={isLoading}
+            >
+              {isLoading ? "Signing in..." : "Sign In"}
+            </Button>
+          </CardFooter>
+        </form>
+      </Card>
+      <div className="mt-6 text-center space-y-3">
+        <p className="text-gray-600 text-sm">
+          Don't have an account?{" "}
+          <button
+            type="button"
+            onClick={() => {
+              setShowSignUp(true)
+              setError("")
+              setSuccess("")
+            }}
+            className="text-transparent bg-clip-text bg-gradient-to-r from-[#0ce6f0] to-[#2256f7] hover:from-[#0bd4de] hover:to-[#1e4ad9] font-medium cursor-pointer"
+          >
+            Create an account
+          </button>
+        </p>
+      </div>
     </>
   )
 }

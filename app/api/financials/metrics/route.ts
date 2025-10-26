@@ -374,17 +374,28 @@ export async function GET(request: NextRequest) {
       const monthEnd = new Date(Date.UTC(currentYear, i + 1, 0, 23, 59, 59))
       const daysInMonth = new Date(Date.UTC(currentYear, i + 1, 0)).getDate()
       const today = new Date()
-      today.setHours(0, 0, 0, 0) // Reset to start of day for accurate comparison
+      today.setHours(0, 0, 0, 0)
+
+      const currentMonth = today.getUTCMonth()
+      const currentYearCheck = today.getUTCFullYear()
+      const isFuture = currentYear > currentYearCheck || (currentYear === currentYearCheck && i > currentMonth)
+      const isCurrent = currentYear === currentYearCheck && i === currentMonth
+
       const propertiesOccupancy: Record<string, number> = {}
+
+      if (i === 0) {
+        console.log("[v0] Occupancy calculation - Today:", today.toISOString())
+        console.log("[v0] Occupancy calculation - Total reservations:", reservations.length)
+      }
 
       properties.forEach((p: any) => {
         const monthReservations = reservations.filter((r: any) => {
           const checkIn = new Date(r.check_in)
           const checkOut = new Date(r.check_out)
-          // Only include reservations that:
-          // 1. Overlap with this month (start before month ends AND end after month starts)
-          // 2. Have check_in < today (are past or current reservations, not future)
-          return r.property_id === p.id && checkIn <= monthEnd && checkOut >= monthStart && checkIn < today
+          const overlaps = checkIn <= monthEnd && checkOut >= monthStart
+          const matches = r.property_id === p.id && overlaps
+
+          return matches
         })
 
         // Calculate occupied days that fall within this month
@@ -392,27 +403,32 @@ export async function GET(request: NextRequest) {
           const checkIn = new Date(r.check_in)
           const checkOut = new Date(r.check_out)
 
-          // Calculate the overlap between reservation and this month
           const overlapStart = checkIn > monthStart ? checkIn : monthStart
           const overlapEnd = checkOut < monthEnd ? checkOut : monthEnd
 
-          const effectiveEnd = monthEnd > today ? (overlapEnd > today ? today : overlapEnd) : overlapEnd
+          const effectiveEnd = isCurrent ? (overlapEnd > today ? today : overlapEnd) : overlapEnd
 
-          // Calculate days in the overlap period
           const daysInOverlap = Math.ceil((effectiveEnd.getTime() - overlapStart.getTime()) / (1000 * 60 * 60 * 24))
 
           return sum + Math.max(0, daysInOverlap)
         }, 0)
 
-        const effectiveDaysInMonth =
-          monthEnd > today ? Math.ceil((today.getTime() - monthStart.getTime()) / (1000 * 60 * 60 * 24)) : daysInMonth
+        const effectiveDaysInMonth = isCurrent
+          ? Math.ceil((today.getTime() - monthStart.getTime()) / (1000 * 60 * 60 * 24))
+          : daysInMonth
 
-        // Calculate occupancy percentage (capped at 100%)
         propertiesOccupancy[p.id] =
           effectiveDaysInMonth > 0 ? Math.min(100, (occupiedDays / effectiveDaysInMonth) * 100) : 0
       })
 
-      return { month, properties: propertiesOccupancy }
+      return { month, properties: propertiesOccupancy, isFuture, isCurrent }
+    })
+
+    console.log("[v0] Occupancy Rate Data generated:", {
+      totalMonths: occupancyRateData.length,
+      sampleMonth: occupancyRateData[0],
+      propertiesCount: properties.length,
+      reservationsCount: reservations.length,
     })
 
     const expenseTrendData = Array.from({ length: 12 }, (_, i) => {

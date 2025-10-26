@@ -1,25 +1,20 @@
 "use client"
 
-import type React from "react"
-
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { MinimumLoadingWrapper } from "@/components/ui/minimum-loading-wrapper"
 import FinancialsLoading from "./loading"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { BarChart, Bar, XAxis, YAxis, Legend, LineChart, Line, Tooltip, ResponsiveContainer } from "recharts"
-import { FileDown, ArrowUpRight, X, Pencil } from "lucide-react"
+import { FileDown, ArrowUpRight, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { AddCategoryModal } from "@/components/financials/add-category-modal"
 import { SVGDonutChart } from "@/components/charts/svg-donut-chart"
 
 type FinancialsTab = "overview" | "revenue" | "expenses"
@@ -67,7 +62,7 @@ export default function FinancialsPage() {
   // const [selectedOccupancyUnits, setSelectedOccupancyUnits] = useState<number[]>([]) // REMOVED
 
   const [selectedRevenueProperties, setSelectedRevenueProperties] = useState<string[]>([])
-  // REMOVED selectedRevenueShareProperties state
+  // REMOVED setSelectedRevenueShareProperties state
   const [selectedRevenueBuilding, setSelectedRevenueBuilding] = useState<string | null>(null)
   const [selectedRevenueUnits, setSelectedRevenueUnits] = useState<Set<number>>(new Set())
 
@@ -617,14 +612,12 @@ export default function FinancialsPage() {
     })
   }, [])
 
-  const selectAllOccupancyProperties = useCallback(() => {
-    // Updated to use selectedOccupancyProperties Set
-    if (selectedOccupancyProperties.size === propertyGroups.size) {
-      setSelectedOccupancyProperties(new Set())
-    } else {
-      setSelectedOccupancyProperties(new Set(propertyGroups.keys()))
-    }
-  }, [propertyGroups, selectedOccupancyProperties])
+  const handleSelectAllOccupancyProperties = useCallback(() => {
+    // Clear both selectedOccupancyProperties and selectedOccupancyUnits
+    // This ensures "All Properties" shows all data
+    setSelectedOccupancyProperties(new Set())
+    setSelectedOccupancyUnits(new Set())
+  }, [])
 
   const filteredRevenueByProperty = useMemo(
     () =>
@@ -952,10 +945,15 @@ export default function FinancialsPage() {
         // If all units in the building are selected, show aggregated building revenue
         if (allUnitsSelected) {
           let totalRevenue = 0
+          const totalNights = 0 // To potentially calculate an average ADR
           buildingUnits.forEach((unit: any) => {
             totalRevenue += item.properties[unit.id] || 0
+            // Assuming item.nights[unit.id] exists and represents nights stayed for that unit
+            // totalNights += item.nights[unit.id] || 0
           })
-          dataPoint[selectedRevenueBuilding] = totalRevenue
+          // const aggregatedADR = totalNights > 0 ? totalRevenue / totalNights : 0
+          const aggregatedRevenue = totalRevenue
+          dataPoint[selectedRevenueBuilding] = aggregatedRevenue
         } else {
           // Show individual unit revenues
           buildingUnits.forEach((unit: any) => {
@@ -971,10 +969,14 @@ export default function FinancialsPage() {
         if (allPropertiesSelected) {
           // Calculate aggregate total for all properties
           let totalRevenue = 0
+          const totalNights = 0
           properties.forEach((property: any) => {
             totalRevenue += item.properties[property.id] || 0
+            // totalNights += item.nights[property.id] || 0
           })
-          dataPoint.total = totalRevenue
+          // const aggregatedADR = totalNights > 0 ? totalRevenue / totalNights : 0
+          const aggregatedRevenue = totalRevenue
+          dataPoint.total = aggregatedRevenue
         } else {
           // Show individual unit revenues
           properties.forEach((property: any) => {
@@ -1010,19 +1012,34 @@ export default function FinancialsPage() {
   }, [properties])
 
   const occupancyTimelineData = useMemo(() => {
+    console.log("[v0] Occupancy Timeline - Raw data:", {
+      hasData: !!occupancyRateData,
+      dataLength: occupancyRateData?.length || 0,
+      sampleData: occupancyRateData?.[0],
+      propertiesCount: properties.length,
+      selectedProperties: Array.from(selectedOccupancyProperties),
+      selectedUnits: Array.from(selectedOccupancyUnits),
+    })
+
     if (!occupancyRateData || occupancyRateData.length === 0) {
+      console.log("[v0] Occupancy Timeline - No data available")
       return []
     }
 
     // If no properties or units are selected, show all data
     if (selectedOccupancyProperties.size === 0 && selectedOccupancyUnits.size === 0) {
-      return occupancyRateData.map((item) => {
-        const dataPoint: any = { month: item.month }
+      const result = occupancyRateData.map((item) => {
+        const dataPoint: any = { month: item.month, isFuture: item.isFuture }
         properties.forEach((property: any) => {
           dataPoint[property.unit_name || property.name] = item.properties[property.id] || 0
         })
         return dataPoint
       })
+      console.log("[v0] Occupancy Timeline - Showing all data:", {
+        resultLength: result.length,
+        samplePoint: result[0],
+      })
+      return result
     }
 
     // If specific properties are selected, check if all units within those properties are selected
@@ -1035,8 +1052,8 @@ export default function FinancialsPage() {
 
     // If all units within the selected properties are selected, aggregate by property (building)
     if (allUnitsInSelectedPropertiesSelected && selectedOccupancyProperties.size > 0) {
-      return occupancyRateData.map((item) => {
-        const dataPoint: any = { month: item.month }
+      const result = occupancyRateData.map((item) => {
+        const dataPoint: any = { month: item.month, isFuture: item.isFuture }
         selectedOccupancyProperties.forEach((propertyName) => {
           const propertyUnits = propertyGroups.get(propertyName) || []
           const totalOccupancy = propertyUnits.reduce((sum, unit) => {
@@ -1047,11 +1064,16 @@ export default function FinancialsPage() {
         })
         return dataPoint
       })
+      console.log("[v0] Occupancy Timeline - Aggregated by property:", {
+        resultLength: result.length,
+        samplePoint: result[0],
+      })
+      return result
     }
 
     // Otherwise, show individual unit data for the selected units
-    return occupancyRateData.map((item) => {
-      const dataPoint: any = { month: item.month }
+    const result = occupancyRateData.map((item) => {
+      const dataPoint: any = { month: item.month, isFuture: item.isFuture }
       selectedOccupancyUnits.forEach((unitId) => {
         const unit = properties.find((p) => p.id === unitId)
         if (unit) {
@@ -1061,6 +1083,11 @@ export default function FinancialsPage() {
       })
       return dataPoint
     })
+    console.log("[v0] Occupancy Timeline - Individual units:", {
+      resultLength: result.length,
+      samplePoint: result[0],
+    })
+    return result
   }, [occupancyRateData, selectedOccupancyUnits, selectedOccupancyProperties, properties, propertyGroups]) // Add propertyGroups dependency
 
   const adrTimelineData = useMemo(() => {
@@ -1116,486 +1143,6 @@ export default function FinancialsPage() {
     console.log("[v0] Selected ADR Building:", selectedADRBuilding)
     return data
   }, [ADRData, properties, selectedADRProperties, selectedADRBuilding, adrBuildingGroups])
-
-  // Profit card filter callbacks
-  const handleProfitPropertyToggle = useCallback(
-    (propertyName: string) => {
-      const newSelected = new Set(selectedProfitProperties)
-      const propertyUnits = propertyGroups.get(propertyName) || []
-      const newSelectedUnits = new Set(selectedProfitUnits) // Create a new Set for units
-
-      if (newSelected.has(propertyName)) {
-        newSelected.delete(propertyName)
-        // Remove all units from this property
-        propertyUnits.forEach((unit) => newSelectedUnits.delete(unit.id))
-      } else {
-        newSelected.add(propertyName)
-        // Add all units from this property
-        propertyUnits.forEach((unit) => newSelectedUnits.add(unit.id))
-      }
-      setSelectedProfitProperties(newSelected)
-      setSelectedProfitUnits(newSelectedUnits) // Update the state with the new Set
-    },
-    [selectedProfitProperties, selectedProfitUnits, propertyGroups],
-  )
-
-  const handleProfitUnitToggle = useCallback(
-    (unitId: number) => {
-      const newSelected = new Set(selectedProfitUnits)
-      if (newSelected.has(unitId)) {
-        newSelected.delete(unitId)
-      } else {
-        newSelected.add(unitId)
-      }
-      setSelectedProfitUnits(new Set(selectedProfitUnits))
-    },
-    [selectedProfitUnits],
-  )
-
-  const handleSelectAllProfitProperties = useCallback(() => {
-    if (selectedProfitProperties.size === propertyGroups.size) {
-      setSelectedProfitProperties(new Set())
-      setSelectedProfitUnits(new Set())
-    } else {
-      setSelectedProfitProperties(new Set(propertyGroups.keys()))
-      const allUnits = new Set<number>()
-      properties.forEach((p) => allUnits.add(p.id))
-      setSelectedProfitUnits(allUnits)
-    }
-  }, [selectedProfitProperties, propertyGroups, properties])
-
-  // Rankings card filter callbacks
-  const handleRankingsPropertyToggle = useCallback(
-    (propertyName: string) => {
-      const newSelected = new Set(selectedRankingsProperties)
-      const propertyUnits = propertyGroups.get(propertyName) || []
-
-      if (newSelected.has(propertyName)) {
-        newSelected.delete(propertyName)
-        propertyUnits.forEach((unit) => selectedRankingsUnits.delete(unit.id))
-        setSelectedRankingsUnits(new Set(selectedRankingsUnits))
-      } else {
-        newSelected.add(propertyName)
-        propertyUnits.forEach((unit) => selectedRankingsUnits.add(unit.id))
-        setSelectedRankingsUnits(new Set(selectedRankingsUnits))
-      }
-      setSelectedRankingsProperties(newSelected)
-    },
-    [selectedRankingsProperties, selectedRankingsUnits, propertyGroups],
-  )
-
-  const handleRankingsUnitToggle = useCallback(
-    (unitId: number) => {
-      const newSelected = new Set(selectedRankingsUnits)
-      if (newSelected.has(unitId)) {
-        newSelected.delete(unitId)
-      } else {
-        newSelected.add(unitId)
-      }
-      setSelectedRankingsUnits(new Set(selectedRankingsUnits))
-    },
-    [selectedRankingsUnits],
-  )
-
-  const handleSelectAllRankingsProperties = useCallback(() => {
-    if (selectedRankingsProperties.size === propertyGroups.size) {
-      setSelectedRankingsProperties(new Set())
-      setSelectedRankingsUnits(new Set())
-    } else {
-      setSelectedRankingsProperties(new Set(propertyGroups.keys()))
-      const allUnits = new Set<number>()
-      properties.forEach((p) => allUnits.add(p.id))
-      setSelectedRankingsUnits(allUnits)
-    }
-  }, [selectedRankingsProperties, propertyGroups, properties])
-
-  // Occupancy card filter callbacks
-  const handleOccupancyPropertyToggle = useCallback(
-    (propertyName: string) => {
-      const newSelected = new Set(selectedOccupancyProperties)
-      const propertyUnits = propertyGroups.get(propertyName) || []
-      const newSelectedUnits = new Set(selectedOccupancyUnits)
-
-      if (newSelected.has(propertyName)) {
-        newSelected.delete(propertyName)
-        // Remove all units from this property
-        propertyUnits.forEach((unit) => newSelectedUnits.delete(unit.id))
-      } else {
-        newSelected.add(propertyName)
-        // Add all units from this property
-        propertyUnits.forEach((unit) => newSelectedUnits.add(unit.id))
-      }
-      setSelectedOccupancyProperties(newSelected)
-      setSelectedOccupancyUnits(newSelectedUnits)
-    },
-    [selectedOccupancyProperties, selectedOccupancyUnits, propertyGroups],
-  )
-
-  const handleOccupancyUnitToggle = useCallback(
-    (unitId: number) => {
-      const newSelected = new Set(selectedOccupancyUnits)
-      if (newSelected.has(unitId)) {
-        newSelected.delete(unitId)
-      } else {
-        newSelected.add(unitId)
-      }
-      setSelectedOccupancyUnits(new Set(selectedOccupancyUnits))
-    },
-    [selectedOccupancyUnits],
-  )
-
-  const handleSelectAllOccupancyProperties = useCallback(() => {
-    if (selectedOccupancyProperties.size === propertyGroups.size) {
-      setSelectedOccupancyProperties(new Set())
-      setSelectedOccupancyUnits(new Set())
-    } else {
-      setSelectedOccupancyProperties(new Set(propertyGroups.keys()))
-      const allUnits = new Set<number>()
-      properties.forEach((p) => allUnits.add(p.id))
-      setSelectedOccupancyUnits(allUnits)
-    }
-  }, [selectedOccupancyProperties, propertyGroups, properties])
-
-  // Transaction History filter callbacks
-  const handleTransactionPropertyToggle = useCallback(
-    (propertyName: string) => {
-      const newSelected = new Set(selectedTransactionProperties)
-      const propertyUnits = propertyGroups.get(propertyName) || []
-
-      if (newSelected.has(propertyName)) {
-        newSelected.delete(propertyName)
-        propertyUnits.forEach((unit) => selectedTransactionUnits.delete(unit.id))
-        setSelectedTransactionUnits(new Set(selectedTransactionUnits))
-      } else {
-        newSelected.add(propertyName)
-        propertyUnits.forEach((unit) => selectedTransactionUnits.add(unit.id))
-        setSelectedTransactionUnits(new Set(selectedTransactionUnits))
-      }
-      setSelectedTransactionProperties(newSelected)
-    },
-    [selectedTransactionProperties, selectedTransactionUnits, propertyGroups],
-  )
-
-  const handleTransactionUnitToggle = useCallback(
-    (unitId: number) => {
-      const newSelected = new Set(selectedTransactionUnits)
-      if (newSelected.has(unitId)) {
-        newSelected.delete(unitId)
-      } else {
-        newSelected.add(unitId)
-      }
-      setSelectedTransactionUnits(new Set(selectedTransactionUnits))
-    },
-    [selectedTransactionUnits],
-  )
-
-  const handleSelectAllTransactionProperties = useCallback(() => {
-    if (selectedTransactionProperties.size === propertyGroups.size) {
-      setSelectedTransactionProperties(new Set())
-      setSelectedTransactionUnits(new Set())
-    } else {
-      setSelectedTransactionProperties(new Set(propertyGroups.keys()))
-      const allUnits = new Set<number>()
-      properties.forEach((p) => allUnits.add(p.id))
-      setSelectedTransactionUnits(allUnits)
-    }
-  }, [selectedTransactionProperties, propertyGroups, properties])
-
-  // REMOVED toggleRevenueShareProperty and selectAllRevenueShareProperties functions
-  // const toggleRevenueShareProperty = useCallback((propertyId: string) => {
-  //   setSelectedRevenueShareProperties((prev) =>
-  //     prev.includes(propertyId) ? prev.filter((id) => id !== propertyId) : [...prev, propertyId],
-  //   )
-  // }, [])
-
-  // const selectAllRevenueShareProperties = useCallback(() => {
-  //   setSelectedRevenueShareProperties(properties.map((p) => p.id))
-  // }, [properties])
-
-  const handleQuickExpenseCategoryChange = (value: string) => {
-    if (value === "add_new") {
-      setPendingCategorySelection("quick")
-      setShowAddCategoryModal(true)
-    } else {
-      setQuickExpenseData({ ...quickExpenseData, category: value })
-    }
-  }
-
-  const handleRecurringExpenseCategoryChange = (value: string) => {
-    if (value === "add_new") {
-      setPendingCategorySelection("recurring")
-      setShowAddCategoryModal(true)
-    } else {
-      setRecurringExpenseData({ ...recurringExpenseData, category: value })
-    }
-  }
-
-  const handleCategoryAdded = async () => {
-    await fetchExpenseCategories()
-    // Don't reset the form - keep the selected property
-  }
-
-  const handleQuickExpenseSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (!quickExpenseData.amount || !quickExpenseData.category || !quickExpenseData.date) {
-      alert("Please fill in all required fields")
-      return
-    }
-
-    setSubmittingQuickExpense(true)
-    try {
-      const expensePayload = {
-        property_id:
-          quickExpenseData.property_id && quickExpenseData.property_id !== "all"
-            ? Number(quickExpenseData.property_id)
-            : null,
-        category: quickExpenseData.category,
-        amount: Number.parseFloat(quickExpenseData.amount),
-        description: quickExpenseData.description || `${quickExpenseData.category} expense`,
-        vendor: quickExpenseData.vendor || null,
-        payment_method: quickExpenseData.payment_method,
-        date: quickExpenseData.date, // CHANGED FROM expense_date to date
-        is_recurring: false,
-        recurring_frequency: null,
-        status: "paid",
-      }
-
-      const response = await fetch("/api/expenses", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.JSON.stringify(expensePayload),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Failed to add expense")
-      }
-
-      toast({
-        title: "Expense added successfully",
-        description: `${quickExpenseData.category} expense of GMD ${formatCurrency(quickExpenseData.amount)} has been recorded.`,
-      })
-
-      // Reset form
-      setQuickExpenseData({
-        property_id: "",
-        category: "maintenance",
-        amount: "",
-        date: new Date().toISOString().split("T")[0],
-        description: "",
-        vendor: "",
-        payment_method: "cash",
-      })
-
-      await fetchDashboardData()
-    } catch (error: any) {
-      console.error("[v0] Error adding quick expense:", error)
-      alert(`Error: ${error.message}`)
-    } finally {
-      setSubmittingQuickExpense(false)
-    }
-  }
-
-  const handleRecurringExpenseSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (!recurringExpenseData.amount || !recurringExpenseData.category || !recurringExpenseData.description) {
-      alert("Please fill in all required fields")
-      return
-    }
-
-    setSubmittingRecurringExpense(true)
-    try {
-      const expensePayload = {
-        property_id:
-          recurringExpenseData.property_id && recurringExpenseData.property_id !== "all"
-            ? Number(recurringExpenseData.property_id)
-            : null,
-        category: recurringExpenseData.category,
-        amount: Number.parseFloat(recurringExpenseData.amount),
-        description: recurringExpenseData.description,
-        vendor: recurringExpenseData.vendor || null,
-        payment_method: recurringExpenseData.payment_method,
-        date: recurringExpenseData.expense_date, // CHANGED FROM expense_date to date
-        is_recurring: true,
-        recurring_frequency: recurringExpenseData.recurring_frequency,
-        status: "paid",
-      }
-
-      const response = await fetch("/api/expenses", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.JSON.stringify(expensePayload),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Failed to add recurring expense")
-      }
-
-      toast({
-        title: "Recurring expense added successfully",
-        description: `${recurringExpenseData.recurring_frequency} ${recurringExpenseData.category} expense of GMD ${formatCurrency(recurringExpenseData.amount)} has been scheduled.`,
-      })
-
-      // Reset form and close modal
-      setRecurringExpenseData({
-        property_id: "",
-        category: "maintenance",
-        amount: "",
-        description: "",
-        vendor: "",
-        payment_method: "cash",
-        expense_date: new Date().toISOString().split("T")[0],
-        recurring_frequency: "monthly",
-      })
-      setShowRecurringModal(false)
-
-      await fetchDashboardData()
-    } catch (error: any) {
-      console.error("[v0] Error adding recurring expense:", error)
-      alert(`Error: ${error.message}`)
-    } finally {
-      setSubmittingRecurringExpense(false)
-    }
-  }
-
-  const handleEditExpense = (expense: any) => {
-    setEditingExpense(expense)
-    setEditExpenseData({
-      property_id: expense.property_id ? String(expense.property_id) : "",
-      category: expense.category.toLowerCase(),
-      amount: String(expense.amount),
-      date: expense.date, // CHANGED FROM expense_date to date
-      description: expense.description,
-      vendor: expense.vendor || "",
-      payment_method: expense.payment_method || "cash",
-    })
-    setShowEditExpenseModal(true)
-  }
-
-  const handleEditExpenseSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (!editExpenseData.amount || !editExpenseData.category || !editExpenseData.date) {
-      alert("Please fill in all required fields")
-      return
-    }
-
-    setSubmittingEditExpense(true)
-    try {
-      const expensePayload = {
-        property_id:
-          editExpenseData.property_id && editExpenseData.property_id !== "all"
-            ? Number(editExpenseData.property_id)
-            : null,
-        category: editExpenseData.category,
-        amount: Number.parseFloat(editExpenseData.amount),
-        description: editExpenseData.description || `${editExpenseData.category} expense`,
-        vendor: editExpenseData.vendor || null,
-        payment_method: editExpenseData.payment_method,
-        date: editExpenseData.date, // CHANGED FROM expense_date to date
-      }
-
-      const response = await fetch(`/api/expenses/${editingExpense.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.JSON.stringify(expensePayload),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Failed to update expense")
-      }
-
-      toast({
-        title: "Expense updated successfully",
-        description: `${editExpenseData.category} expense has been updated.`,
-      })
-
-      setShowEditExpenseModal(false)
-      setEditingExpense(null)
-
-      await fetchDashboardData()
-    } catch (error: any) {
-      console.error("[v0] Error updating expense:", error)
-      alert(`Error: ${error.message}`)
-    } finally {
-      setSubmittingEditExpense(false)
-    }
-  }
-
-  const handleEditRecurringExpense = (expense: any) => {
-    setEditingRecurringExpense(expense)
-    setEditRecurringExpenseData({
-      property_id: expense.property_id ? String(expense.property_id) : "",
-      category: expense.category.toLowerCase(),
-      amount: String(expense.amount),
-      description: expense.description,
-      vendor: expense.vendor || "",
-      payment_method: expense.payment_method || "cash",
-      recurring_frequency: expense.recurring_frequency,
-      date: expense.date, // CHANGED FROM expense_date to date
-    })
-    setShowEditRecurringModal(true)
-  }
-
-  const handleEditRecurringExpenseSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (
-      !editRecurringExpenseData.amount ||
-      !editRecurringExpenseData.category ||
-      !editRecurringExpenseData.description
-    ) {
-      alert("Please fill in all required fields")
-      return
-    }
-
-    setSubmittingEditRecurringExpense(true)
-    try {
-      const expensePayload = {
-        property_id:
-          editRecurringExpenseData.property_id && editRecurringExpenseData.property_id !== "all"
-            ? Number(editRecurringExpenseData.property_id)
-            : null,
-        category: editRecurringExpenseData.category,
-        amount: Number.parseFloat(editRecurringExpenseData.amount),
-        description: editRecurringExpenseData.description,
-        vendor: editRecurringExpenseData.vendor || null,
-        payment_method: editRecurringExpenseData.payment_method,
-        date: editRecurringExpenseData.date, // CHANGED FROM expense_date to date
-        recurring_frequency: editRecurringExpenseData.recurring_frequency,
-      }
-
-      const response = await fetch(`/api/expenses/${editingRecurringExpense.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.JSON.stringify(expensePayload),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Failed to update recurring expense")
-      }
-
-      toast({
-        title: "Recurring expense updated successfully",
-        description: `${editRecurringExpenseData.recurring_frequency} ${editRecurringExpenseData.category} expense has been updated.`,
-      })
-
-      setShowEditRecurringModal(false)
-      setEditingRecurringExpense(null)
-
-      await fetchDashboardData()
-    } catch (error: any) {
-      console.error("[v0] Error updating recurring expense:", error)
-      alert(`Error: ${error.message}`)
-    } finally {
-      setSubmittingEditRecurringExpense(false)
-    }
-  }
 
   // Profit units for selected properties
   const profitUnitsForSelectedProperties = useMemo(() => {
@@ -1887,11 +1434,14 @@ export default function FinancialsPage() {
     (buildingName: string) => {
       if (selectedOccupancyBuilding === buildingName) {
         setSelectedOccupancyBuilding("all")
-        setSelectedOccupancyUnits([])
+        setSelectedOccupancyUnits(new Set()) // Clear unit selections
+        setSelectedOccupancyProperties(new Set()) // Clear property selections
       } else {
         setSelectedOccupancyBuilding(buildingName)
         const buildingUnits = occupancyBuildingGroups.get(buildingName) || []
-        setSelectedOccupancyUnits(buildingUnits.map((u: any) => u.id))
+        setSelectedOccupancyUnits(new Set(buildingUnits.map((u: any) => u.id)))
+        // Add the building name to selectedOccupancyProperties to trigger property-level aggregation
+        setSelectedOccupancyProperties(new Set([buildingName]))
       }
     },
     [selectedOccupancyBuilding, occupancyBuildingGroups],
@@ -1900,23 +1450,22 @@ export default function FinancialsPage() {
   const toggleOccupancyUnit = useCallback(
     (unitId: number) => {
       setSelectedOccupancyUnits((prev) => {
-        const newSelectedUnits = [...prev]
-        if (newSelectedUnits.includes(unitId)) {
+        const newSelectedUnits = new Set(prev)
+        if (newSelectedUnits.has(unitId)) {
           // Remove unit
-          const index = newSelectedUnits.indexOf(unitId)
-          newSelectedUnits.splice(index, 1)
+          newSelectedUnits.delete(unitId)
         } else {
           // Add unit
-          newSelectedUnits.push(unitId)
+          newSelectedUnits.add(unitId)
         }
 
         // If building is selected and all units are now deselected, reset building
-        if (selectedOccupancyBuilding !== "all" && newSelectedUnits.length === 0) {
+        if (selectedOccupancyBuilding !== "all" && newSelectedUnits.size === 0) {
           setSelectedOccupancyBuilding("all")
         } else if (selectedOccupancyBuilding !== "all") {
           // If a unit is deselected from a building, the building should reflect partial selection
           const buildingUnits = occupancyBuildingGroups.get(selectedOccupancyBuilding) || []
-          const allUnitsSelected = buildingUnits.every((u: any) => newSelectedUnits.includes(u.id))
+          const allUnitsSelected = buildingUnits.every((u: any) => newSelectedUnits.has(u.id))
           if (!allUnitsSelected) {
             // The building itself is no longer fully selected, so we might want to indicate that
             // For now, we'll keep the building name but it's not fully selected
@@ -1928,6 +1477,71 @@ export default function FinancialsPage() {
     },
     [selectedOccupancyBuilding, occupancyBuildingGroups],
   )
+
+  // Define the handler functions for the lint errors
+  const handleSelectAllProfitProperties = useCallback(() => {
+    if (selectedProfitProperties.size === 0 || selectedProfitProperties.size === propertyGroups.size) {
+      setSelectedProfitProperties(new Set())
+    } else {
+      setSelectedProfitProperties(new Set(propertyGroups.keys()))
+    }
+  }, [propertyGroups, selectedProfitProperties])
+
+  const handleProfitPropertyToggle = useCallback((propertyName: string) => {
+    setSelectedProfitProperties((prev) => {
+      const newSelected = new Set(prev)
+      if (newSelected.has(propertyName)) {
+        newSelected.delete(propertyName)
+      } else {
+        newSelected.add(propertyName)
+      }
+      return newSelected
+    })
+  }, [])
+
+  const handleProfitUnitToggle = useCallback((unitId: number) => {
+    setSelectedProfitUnits((prev) => {
+      const newSelectedUnits = new Set(prev)
+      if (newSelectedUnits.has(unitId)) {
+        newSelectedUnits.delete(unitId)
+      } else {
+        newSelectedUnits.add(unitId)
+      }
+      return newSelectedUnits
+    })
+  }, [])
+
+  const handleSelectAllTransactionProperties = useCallback(() => {
+    if (selectedTransactionProperties.size === 0 || selectedTransactionProperties.size === propertyGroups.size) {
+      setSelectedTransactionProperties(new Set())
+    } else {
+      setSelectedTransactionProperties(new Set(propertyGroups.keys()))
+    }
+  }, [propertyGroups, selectedTransactionProperties])
+
+  const handleTransactionPropertyToggle = useCallback((propertyName: string) => {
+    setSelectedTransactionProperties((prev) => {
+      const newSelected = new Set(prev)
+      if (newSelected.has(propertyName)) {
+        newSelected.delete(propertyName)
+      } else {
+        newSelected.add(propertyName)
+      }
+      return newSelected
+    })
+  }, [])
+
+  const handleTransactionUnitToggle = useCallback((unitId: number) => {
+    setSelectedTransactionUnits((prev) => {
+      const newSelectedUnits = new Set(prev)
+      if (newSelectedUnits.has(unitId)) {
+        newSelectedUnits.delete(unitId)
+      } else {
+        newSelectedUnits.add(unitId)
+      }
+      return newSelectedUnits
+    })
+  }, [])
 
   return (
     <MinimumLoadingWrapper skeleton={<FinancialsLoading />} delay={1000}>
@@ -1942,6 +1556,7 @@ export default function FinancialsPage() {
 
         <Tabs defaultValue="overview" className="space-y-6">
           {/* Tab Navigation */}
+          {/* <TabsList className="grid w-full grid-cols-2"> */}
           <TabsList className="inline-flex rounded-lg bg-muted p-1">
             <TabsTrigger
               value="overview"
@@ -1963,16 +1578,7 @@ export default function FinancialsPage() {
             >
               Revenue
             </TabsTrigger>
-            <TabsTrigger
-              value="expenses"
-              onClick={() => setActiveTab("expenses")}
-              className={cn(
-                "rounded-md px-6 py-2 text-sm font-semibold transition-colors data-[state=active]:bg-[#3B82F6] data-[state=active]:text-white data-[state=active]:hover:bg-[#2563EB]",
-                "bg-transparent text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800",
-              )}
-            >
-              Expenses
-            </TabsTrigger>
+            {/* <TabsTrigger value="expenses">Expenses</TabsTrigger> */}
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -2349,54 +1955,65 @@ export default function FinancialsPage() {
                   </Button>
                 </div>
 
-                <div className="mb-4 flex flex-col gap-3">
+                <div className="mb-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <p className="text-sm text-muted-foreground">Filter by property:</p>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleSelectAllOccupancyProperties}
-                      className="h-7 text-xs text-blue-600 hover:text-blue-700"
-                    >
-                      Select All
-                    </Button>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {properties.map((property) => (
-                      <button
-                        key={property.id}
-                        onClick={() => handleOccupancyPropertyToggle(property.id)}
-                        className={cn(
-                          "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-                          selectedOccupancyProperties.has(property.id)
-                            ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
-                            : "border-gray-300 bg-white text-gray-600 hover:border-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400",
-                        )}
-                      >
-                        {property.name}
-                      </button>
-                    ))}
                   </div>
 
-                  {occupancyUnitsForSelectedProperties.length > 0 && (
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm text-muted-foreground">Units:</span>
-                      {occupancyUnitsForSelectedProperties.map((unit) => (
-                        <Button
-                          key={unit.id}
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleOccupancyUnitToggle(unit.id)}
+                  {/* Level 1: Buildings + All Properties */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      onClick={handleSelectAllOccupancyProperties}
+                      className={cn(
+                        "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                        selectedOccupancyProperties.size === 0 && selectedOccupancyUnits.size === 0
+                          ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
+                          : "border-gray-300 bg-white text-gray-600 hover:border-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400",
+                      )}
+                    >
+                      All Properties
+                    </button>
+
+                    {Array.from(occupancyBuildingGroups.entries()).map(([buildingName, units]) => {
+                      const allUnitsSelected = units.every((unit: any) => selectedOccupancyUnits.has(unit.id))
+                      const someUnitsSelected = units.some((unit: any) => selectedOccupancyUnits.has(unit.id))
+
+                      return (
+                        <button
+                          key={buildingName}
+                          onClick={() => toggleOccupancyBuilding(buildingName)}
                           className={cn(
-                            "h-9 rounded-full border-2 px-4 transition-colors",
+                            "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                            allUnitsSelected
+                              ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
+                              : someUnitsSelected
+                                ? "border-blue-300 bg-blue-25 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400"
+                                : "border-gray-300 bg-white text-gray-600 hover:border-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400",
+                          )}
+                        >
+                          {buildingName} ({units.length})
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  {/* Level 2: Units (shown when a building is selected) */}
+                  {selectedOccupancyBuilding && occupancyBuildingGroups.get(selectedOccupancyBuilding) && (
+                    <div className="flex flex-wrap items-center gap-2 border-l-2 border-blue-500 pl-4">
+                      <span className="text-xs font-medium text-muted-foreground">Units:</span>
+                      {occupancyBuildingGroups.get(selectedOccupancyBuilding)?.map((unit: any) => (
+                        <button
+                          key={unit.id}
+                          onClick={() => toggleOccupancyUnit(unit.id)}
+                          className={cn(
+                            "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
                             selectedOccupancyUnits.has(unit.id)
-                              ? "border-blue-600 bg-blue-50 text-blue-600 hover:bg-blue-100"
-                              : "border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-gray-50",
+                              ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
+                              : "border-gray-300 bg-white text-gray-600 hover:border-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400",
                           )}
                         >
                           {unit.unit_name}
-                          {selectedOccupancyUnits.has(unit.id) && <X className="ml-1 h-3 w-3" />}
-                        </Button>
+                        </button>
                       ))}
                     </div>
                   )}
@@ -2428,8 +2045,76 @@ export default function FinancialsPage() {
                       formatter={(value: number) => [`${value}%`, ""]}
                     />
                     <Legend />
-                    {selectedOccupancyBuilding === "all"
-                      ? Array.from(selectedOccupancyUnits).map((unitId, index) => {
+                    {(() => {
+                      if (selectedOccupancyBuilding && selectedOccupancyBuilding !== "all") {
+                        const buildingUnits = occupancyBuildingGroups.get(selectedOccupancyBuilding) || []
+                        const allUnitsSelected = buildingUnits.every((unit: any) => selectedOccupancyUnits.has(unit.id))
+
+                        if (allUnitsSelected) {
+                          return (
+                            <Line
+                              key={selectedOccupancyBuilding}
+                              type="monotone"
+                              dataKey={selectedOccupancyBuilding}
+                              stroke={propertyColors[0]}
+                              strokeWidth={2}
+                              strokeOpacity={1}
+                              dot={(props: any) => {
+                                const { cx, cy, payload } = props
+                                return (
+                                  <circle
+                                    cx={cx}
+                                    cy={cy}
+                                    r={4}
+                                    fill={propertyColors[0]}
+                                    opacity={payload?.isFuture ? 0.4 : 1}
+                                    stroke={propertyColors[0]}
+                                    strokeWidth={payload?.isFuture ? 1 : 0}
+                                    strokeDasharray={payload?.isFuture ? "2,2" : "0"}
+                                  />
+                                )
+                              }}
+                              strokeDasharray={undefined}
+                            />
+                          )
+                        } else {
+                          // Show individual unit lines for the selected building
+                          return Array.from(selectedOccupancyUnits)
+                            .filter((unitId) => buildingUnits.some((unit: any) => unit.id === unitId))
+                            .map((unitId, index) => {
+                              const unit = properties.find((p) => p.id === unitId)
+                              if (!unit) return null
+                              return (
+                                <Line
+                                  key={unitId}
+                                  type="monotone"
+                                  dataKey={unit.unit_name}
+                                  stroke={propertyColors[index % propertyColors.length]}
+                                  strokeWidth={2}
+                                  strokeOpacity={1}
+                                  dot={(props: any) => {
+                                    const { cx, cy, payload } = props
+                                    return (
+                                      <circle
+                                        cx={cx}
+                                        cy={cy}
+                                        r={4}
+                                        fill={propertyColors[index % propertyColors.length]}
+                                        opacity={payload?.isFuture ? 0.4 : 1}
+                                        stroke={propertyColors[index % propertyColors.length]}
+                                        strokeWidth={payload?.isFuture ? 1 : 0}
+                                        strokeDasharray={payload?.isFuture ? "2,2" : "0"}
+                                      />
+                                    )
+                                  }}
+                                  strokeDasharray={undefined}
+                                />
+                              )
+                            })
+                        }
+                      } else if (selectedOccupancyUnits.size > 0) {
+                        // Show individual unit lines for selected units across different buildings
+                        return Array.from(selectedOccupancyUnits).map((unitId, index) => {
                           const unit = properties.find((p) => p.id === unitId)
                           if (!unit) return null
                           return (
@@ -2439,36 +2124,63 @@ export default function FinancialsPage() {
                               dataKey={unit.unit_name}
                               stroke={propertyColors[index % propertyColors.length]}
                               strokeWidth={2}
-                              dot={{ r: 4 }}
+                              strokeOpacity={1}
+                              dot={(props: any) => {
+                                const { cx, cy, payload } = props
+                                return (
+                                  <circle
+                                    cx={cx}
+                                    cy={cy}
+                                    r={4}
+                                    fill={propertyColors[index % propertyColors.length]}
+                                    opacity={payload?.isFuture ? 0.4 : 1}
+                                    stroke={propertyColors[index % propertyColors.length]}
+                                    strokeWidth={payload?.isFuture ? 1 : 0}
+                                    strokeDasharray={payload?.isFuture ? "2,2" : "0"}
+                                  />
+                                )
+                              }}
+                              strokeDasharray={undefined}
                             />
                           )
                         })
-                      : selectedOccupancyUnits.length ===
-                          (occupancyBuildingGroups.get(selectedOccupancyBuilding) || []).length
-                        ? [
+                      } else {
+                        // Default: Show all properties if no specific building or units are selected
+                        // Note: This part might need adjustment based on how "All Properties" is handled
+                        // If "All Properties" means showing individual lines for all units, the logic below handles it
+                        const allUnits = properties.map((p) => p.id)
+                        return allUnits.map((unitId, index) => {
+                          const unit = properties.find((p) => p.id === unitId)
+                          if (!unit) return null
+                          return (
                             <Line
-                              key={selectedOccupancyBuilding}
+                              key={unitId}
                               type="monotone"
-                              dataKey={selectedOccupancyBuilding}
-                              stroke={propertyColors[0]}
+                              dataKey={unit.unit_name}
+                              stroke={propertyColors[index % propertyColors.length]}
                               strokeWidth={2}
-                              dot={{ r: 4 }}
-                            />,
-                          ]
-                        : Array.from(selectedOccupancyUnits).map((unitId, index) => {
-                            const unit = properties.find((p) => p.id === unitId)
-                            if (!unit) return null
-                            return (
-                              <Line
-                                key={unitId}
-                                type="monotone"
-                                dataKey={unit.unit_name}
-                                stroke={propertyColors[index % propertyColors.length]}
-                                strokeWidth={2}
-                                dot={{ r: 4 }}
-                              />
-                            )
-                          })}
+                              strokeOpacity={1}
+                              dot={(props: any) => {
+                                const { cx, cy, payload } = props
+                                return (
+                                  <circle
+                                    cx={cx}
+                                    cy={cy}
+                                    r={4}
+                                    fill={propertyColors[index % propertyColors.length]}
+                                    opacity={payload?.isFuture ? 0.4 : 1}
+                                    stroke={propertyColors[index % propertyColors.length]}
+                                    strokeWidth={payload?.isFuture ? 1 : 0}
+                                    strokeDasharray={payload?.isFuture ? "2,2" : "0"}
+                                  />
+                                )
+                              }}
+                              strokeDasharray={undefined}
+                            />
+                          )
+                        })
+                      }
+                    })()}
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -2929,254 +2641,6 @@ export default function FinancialsPage() {
               </div>
             </Card>
 
-            <Card className="border-border bg-card">
-              <div className="p-6">
-                <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <h2 className="font-sans text-lg font-semibold text-foreground">Average Daily Rate (ADR)</h2>
-                    <p className="text-sm text-muted-foreground">Compare your ADR against market average</p>
-                  </div>
-                  <Button variant="outline" size="sm">
-                    <FileDown className="mr-2 h-4 w-4" />
-                    Export
-                  </Button>
-                </div>
-
-                {/* ADDING DATE RANGE FILTER */}
-                <div className="mb-4 flex flex-wrap items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm font-medium text-muted-foreground">From:</label>
-                    <input
-                      type="date"
-                      value={adrDateRange.start.toISOString().split("T")[0]}
-                      onChange={(e) => {
-                        const newStart = new Date(e.target.value)
-                        setAdrDateRange((prev) => ({ ...prev, start: newStart }))
-                      }}
-                      className="rounded-md border border-border bg-background px-3 py-1.5 text-sm"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm font-medium text-muted-foreground">To:</label>
-                    <input
-                      type="date"
-                      value={adrDateRange.end.toISOString().split("T")[0]}
-                      onChange={(e) => {
-                        const newEnd = new Date(e.target.value)
-                        setAdrDateRange((prev) => ({ ...prev, end: newEnd }))
-                      }}
-                      className="rounded-md border border-border bg-background px-3 py-1.5 text-sm"
-                    />
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const currentYear = new Date().getFullYear()
-                      setAdrDateRange({
-                        start: new Date(currentYear, 0, 1),
-                        end: new Date(currentYear, 11, 31),
-                      })
-                    }}
-                  >
-                    Reset to Current Year
-                  </Button>
-                </div>
-
-                {/* Replacing ADR filter with P&L-style filter */}
-                <div className="mb-4 flex flex-col gap-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        if (selectedADRProperties.length === properties.length) {
-                          setSelectedADRProperties([])
-                        } else {
-                          setSelectedADRProperties(properties.map((p: any) => p.id))
-                        }
-                        setSelectedADRBuilding(null)
-                      }}
-                      className={cn(
-                        "h-9 rounded-full border-2 px-4 transition-colors",
-                        selectedADRProperties.length === 0 || selectedADRProperties.length === properties.length
-                          ? "border-blue-600 bg-blue-50 text-blue-600 hover:bg-blue-100"
-                          : "border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-gray-50",
-                      )}
-                    >
-                      All Properties
-                    </Button>
-                    {Array.from(adrBuildingGroups.keys()).map((buildingName) => {
-                      const buildingUnits = adrBuildingGroups.get(buildingName) || []
-                      const allUnitsSelected = buildingUnits.every((unit: any) =>
-                        selectedADRProperties.includes(unit.id),
-                      )
-                      const someUnitsSelected = buildingUnits.some((unit: any) =>
-                        selectedADRProperties.includes(unit.id),
-                      )
-
-                      return (
-                        <Button
-                          key={buildingName}
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            if (allUnitsSelected) {
-                              // Deselect all units in this building
-                              setSelectedADRProperties((prev) =>
-                                prev.filter((id) => !buildingUnits.find((u: any) => u.id === id)),
-                              )
-                              setSelectedADRBuilding(null)
-                            } else {
-                              // Select all units in this building
-                              const unitIds = buildingUnits.map((u: any) => u.id)
-                              setSelectedADRProperties((prev) => {
-                                const newSet = new Set([...prev, ...unitIds])
-                                return Array.from(newSet)
-                              })
-                              setSelectedADRBuilding(buildingName)
-                            }
-                          }}
-                          className={cn(
-                            "h-9 rounded-full border-2 px-4 transition-colors",
-                            allUnitsSelected
-                              ? "border-blue-600 bg-blue-50 text-blue-600 hover:bg-blue-100"
-                              : someUnitsSelected
-                                ? "border-blue-400 bg-blue-25 text-blue-500 hover:bg-blue-50"
-                                : "border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-gray-50",
-                          )}
-                        >
-                          {buildingName}
-                          {buildingUnits.length > 1 && (
-                            <span className="ml-1 text-xs opacity-60">({buildingUnits.length})</span>
-                          )}
-                        </Button>
-                      )
-                    })}
-                  </div>
-
-                  {selectedADRBuilding && adrBuildingGroups.get(selectedADRBuilding) && (
-                    <div className="flex flex-wrap items-center gap-2 border-l-2 border-blue-500 pl-4">
-                      <span className="text-sm text-muted-foreground">Units:</span>
-                      {adrBuildingGroups.get(selectedADRBuilding)?.map((unit: any) => (
-                        <Button
-                          key={unit.id}
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedADRProperties((prev) => {
-                              if (prev.includes(unit.id)) {
-                                return prev.filter((id) => id !== unit.id)
-                              } else {
-                                return [...prev, unit.id]
-                              }
-                            })
-                          }}
-                          className={cn(
-                            "h-9 rounded-full border-2 px-4 transition-colors",
-                            selectedADRProperties.includes(unit.id)
-                              ? "border-blue-600 bg-blue-50 text-blue-600 hover:bg-blue-100"
-                              : "border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-gray-50",
-                          )}
-                        >
-                          {unit.unit_name}
-                          {selectedADRProperties.includes(unit.id) && <X className="ml-1 h-3 w-3" />}
-                        </Button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={adrTimelineData}>
-                    <XAxis
-                      dataKey="month"
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={12}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <YAxis
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={12}
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(value) => `${value}`}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "8px",
-                      }}
-                      formatter={(value: number) => [`GMD ${formatCurrency(value)}`, ""]}
-                    />
-                    <Legend />
-                    {selectedADRBuilding && adrBuildingGroups.get(selectedADRBuilding)
-                      ? (() => {
-                          const buildingUnits = adrBuildingGroups.get(selectedADRBuilding) || []
-                          const allUnitsSelected = buildingUnits.every((unit: any) =>
-                            selectedADRProperties.includes(unit.id),
-                          )
-
-                          if (allUnitsSelected) {
-                            // Show single line for building aggregate
-                            return (
-                              <Line
-                                key={selectedADRBuilding}
-                                type="monotone"
-                                dataKey={selectedADRBuilding}
-                                name={selectedADRBuilding}
-                                stroke={`hsl(${Math.random() * 360}, 70%, 50%)`}
-                                strokeWidth={2}
-                                dot={false}
-                              />
-                            )
-                          } else {
-                            // Show individual unit lines
-                            return properties
-                              .filter((property: any) => selectedADRProperties.includes(property.id))
-                              .map((property: any, index: number) => (
-                                <Line
-                                  key={property.id}
-                                  type="monotone"
-                                  dataKey={property.id.toString()}
-                                  stroke={`hsl(${(index * 360) / properties.length}, 70%, 50%)`}
-                                  strokeWidth={2}
-                                  dot={false}
-                                  name={property.name || property.unit_name || `Property ${property.id}`}
-                                />
-                              ))
-                          }
-                        })()
-                      : // Default: show all selected properties
-                        properties
-                          .filter((property: any) => selectedADRProperties.includes(property.id))
-                          .map((property: any, index: number) => (
-                            <Line
-                              key={property.id}
-                              type="monotone"
-                              dataKey={property.id.toString()}
-                              stroke={`hsl(${(index * 360) / properties.length}, 70%, 50%)`}
-                              strokeWidth={2}
-                              dot={false}
-                              name={property.name || property.unit_name || `Property ${property.id}`}
-                            />
-                          ))}
-                    <Line
-                      type="monotone"
-                      dataKey="marketADR"
-                      stroke="#10B981"
-                      strokeWidth={2}
-                      strokeDasharray="5 5"
-                      dot={{ r: 4 }}
-                      name="Market Average"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </Card>
-
             <div className="grid gap-6 md:grid-cols-2">
               {/* Revenue Share by Property Card */}
               <Card className="border-border bg-card">
@@ -3481,13 +2945,16 @@ export default function FinancialsPage() {
 
           {/* Expenses Tab Content */}
           <TabsContent value="expenses" className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-2">
-              <Card className="border-border bg-card">
+            {/* Expense Summary Cards */}
+            <div className="grid gap-4 md:grid-cols-3">
+              <Card className="border-border bg-[#FEF2F2] dark:bg-[#7F1D1D]">
                 <CardContent className="p-6">
                   <div className="space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">YTD Expenses</p>
-                    <p className="font-sans text-2xl font-bold text-foreground">GMD {formatCurrency(ytdExpenses)}</p>
-                    <div className="flex items-center text-sm text-red-600 dark:text-red-400">
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Expenses</p>
+                    <p className="font-sans text-2xl font-bold text-gray-900 dark:text-white">
+                      GMD {formatCurrency(ytdExpenses)}
+                    </p>
+                    <div className="flex items-center text-sm text-red-700 dark:text-red-400">
                       <ArrowUpRight className="mr-1 h-4 w-4" />
                       +8% vs last year
                     </div>
@@ -3495,14 +2962,33 @@ export default function FinancialsPage() {
                 </CardContent>
               </Card>
 
-              <Card className="border-border bg-card">
+              <Card className="border-border bg-[#FEF3C7] dark:bg-[#A16207]">
                 <CardContent className="p-6">
                   <div className="space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">Avg Monthly Expenses</p>
-                    <p className="font-sans text-2xl font-bold text-foreground">
-                      GMD {formatCurrency(Math.round(ytdExpenses / 12))}
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Average Monthly Expense</p>
+                    <p className="font-sans text-2xl font-bold text-gray-900 dark:text-white">
+                      GMD {formatCurrency(ytdExpenses / 12)}
                     </p>
-                    <div className="flex items-center text-sm text-muted-foreground">Based on YTD data</div>
+                    <div className="flex items-center text-sm text-gray-700 dark:text-gray-300">
+                      <ArrowUpRight className="mr-1 h-4 w-4" />
+                      +5% vs last year
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-border bg-[#E0E7FF] dark:bg-[#1E3A8A]">
+                <CardContent className="p-6">
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Most Expensive Month</p>
+                    <p className="font-sans text-2xl font-bold text-gray-900 dark:text-white">
+                      {/* Placeholder for most expensive month */}
+                      August
+                    </p>
+                    <div className="flex items-center text-sm text-red-700 dark:text-red-400">
+                      <ArrowUpRight className="mr-1 h-4 w-4" />
+                      +15% vs September
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -3514,7 +3000,7 @@ export default function FinancialsPage() {
                 <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h2 className="font-sans text-lg font-semibold text-foreground">Expense Trend</h2>
-                    <p className="text-sm text-muted-foreground">Track expense trends across your portfolio</p>
+                    <p className="text-sm text-muted-foreground">Monthly expense trends across your portfolio</p>
                   </div>
                   <Button variant="outline" size="sm">
                     <FileDown className="mr-2 h-4 w-4" />
@@ -3569,37 +3055,48 @@ export default function FinancialsPage() {
 
                   {/* Level 1: Buildings + All Properties */}
                   <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      onClick={selectAllExpensePropertiesNew}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        if (selectedExpenseUnits.size === properties.length) {
+                          setSelectedExpenseUnits(new Set())
+                        } else {
+                          setSelectedExpenseUnits(new Set(properties.map((p: any) => p.id)))
+                        }
+                        setSelectedExpenseBuilding(null)
+                      }}
                       className={cn(
-                        "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-                        selectedExpenseUnits.size === properties.length && !selectedExpenseBuilding
-                          ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
-                          : "border-gray-300 bg-white text-gray-600 hover:border-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400",
+                        "h-9 rounded-full border-2 px-4 transition-colors",
+                        selectedExpenseUnits.size === 0 || selectedExpenseUnits.size === properties.length
+                          ? "border-blue-600 bg-blue-50 text-blue-600 hover:bg-blue-100"
+                          : "border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-gray-50",
                       )}
                     >
                       All Properties
-                    </button>
+                    </Button>
 
                     {Array.from(expenseBuildingGroups.entries()).map(([buildingName, units]) => {
                       const allUnitsSelected = units.every((unit: any) => selectedExpenseUnits.has(unit.id))
                       const someUnitsSelected = units.some((unit: any) => selectedExpenseUnits.has(unit.id))
 
                       return (
-                        <button
+                        <Button
                           key={buildingName}
+                          variant="outline"
+                          size="sm"
                           onClick={() => toggleExpenseBuilding(buildingName)}
                           className={cn(
-                            "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                            "h-9 rounded-full border-2 px-4 transition-colors",
                             allUnitsSelected
-                              ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
+                              ? "border-blue-600 bg-blue-50 text-blue-600 hover:bg-blue-100"
                               : someUnitsSelected
-                                ? "border-blue-300 bg-blue-25 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400"
-                                : "border-gray-300 bg-white text-gray-600 hover:border-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400",
+                                ? "border-blue-400 bg-blue-25 text-blue-500 hover:bg-blue-50"
+                                : "border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-gray-50",
                           )}
                         >
                           {buildingName} ({units.length})
-                        </button>
+                        </Button>
                       )
                     })}
                   </div>
@@ -3609,18 +3106,21 @@ export default function FinancialsPage() {
                     <div className="flex flex-wrap items-center gap-2 border-l-2 border-blue-500 pl-4">
                       <span className="text-xs font-medium text-muted-foreground">Units:</span>
                       {expenseBuildingGroups.get(selectedExpenseBuilding)?.map((unit: any) => (
-                        <button
+                        <Button
                           key={unit.id}
+                          variant="outline"
+                          size="sm"
                           onClick={() => toggleExpenseUnit(unit.id)}
                           className={cn(
-                            "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                            "h-9 rounded-full border-2 px-4 transition-colors",
                             selectedExpenseUnits.has(unit.id)
-                              ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
-                              : "border-gray-300 bg-white text-gray-600 hover:border-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400",
+                              ? "border-blue-600 bg-blue-50 text-blue-600 hover:bg-blue-100"
+                              : "border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-gray-50",
                           )}
                         >
                           {unit.unit_name}
-                        </button>
+                          {selectedExpenseUnits.has(unit.id) && <X className="ml-1 h-3 w-3" />}
+                        </Button>
                       ))}
                     </div>
                   )}
@@ -3640,7 +3140,7 @@ export default function FinancialsPage() {
                       fontSize={12}
                       tickLine={false}
                       axisLine={false}
-                      tickFormatter={(value) => `${formatCurrency(value / 1000)}k`}
+                      tickFormatter={(value) => `GMD ${(value / 1000).toFixed(0)}k`}
                     />
                     <Tooltip
                       contentStyle={{
@@ -3651,95 +3151,68 @@ export default function FinancialsPage() {
                       formatter={(value: number) => [`GMD ${formatCurrency(value)}`, ""]}
                     />
                     <Legend />
-                    {selectedExpenseBuilding && expenseBuildingGroups.get(selectedExpenseBuilding)
-                      ? // Building-level view
-                        (() => {
-                          const buildingUnits = expenseBuildingGroups.get(selectedExpenseBuilding) || []
-                          const allUnitsSelected = buildingUnits.every((unit: any) => selectedExpenseUnits.has(unit.id))
+                    {(() => {
+                      if (selectedExpenseBuilding && expenseBuildingGroups.get(selectedExpenseBuilding)) {
+                        const buildingUnits = expenseBuildingGroups.get(selectedExpenseBuilding) || []
+                        const allUnitsSelected = buildingUnits.every((unit: any) => selectedExpenseUnits.has(unit.id))
 
-                          if (allUnitsSelected) {
-                            // Show aggregated building line
+                        if (allUnitsSelected) {
+                          return (
+                            <Line
+                              key={selectedExpenseBuilding}
+                              type="monotone"
+                              dataKey={selectedExpenseBuilding}
+                              stroke={propertyColors[0]}
+                              strokeWidth={2}
+                              dot={false}
+                            />
+                          )
+                        } else {
+                          return Array.from(selectedExpenseUnits).map((unitId, index) => {
+                            const unit = properties.find((p) => p.id === unitId)
+                            if (!unit) return null
                             return (
                               <Line
-                                key={selectedExpenseBuilding}
+                                key={unitId}
                                 type="monotone"
-                                dataKey={selectedExpenseBuilding}
-                                name={selectedExpenseBuilding}
-                                stroke={propertyColors[0]}
+                                dataKey={unit.unit_name}
+                                stroke={propertyColors[index % propertyColors.length]}
                                 strokeWidth={2}
-                                dot={{ r: 4 }}
+                                dot={false}
                               />
                             )
-                          } else {
-                            // Show individual unit lines
-                            return buildingUnits
-                              .filter((unit: any) => selectedExpenseUnits.has(unit.id))
-                              .map((unit: any, index: number) => (
-                                <Line
-                                  key={unit.id}
-                                  type="monotone"
-                                  dataKey={unit.id.toString()}
-                                  name={unit.unit_name || `Unit ${unit.id}`}
-                                  stroke={propertyColors[index % propertyColors.length]}
-                                  strokeWidth={2}
-                                  dot={{ r: 4 }}
-                                />
-                              ))
-                          }
-                        })()
-                      : // All properties view
-                        (() => {
-                          const allPropertiesSelected =
-                            selectedExpenseUnits.size === properties.length && properties.length > 0
-
-                          if (allPropertiesSelected) {
-                            // Show single aggregated line for all properties
-                            return (
-                              <Line
-                                key="total"
-                                type="monotone"
-                                dataKey="total"
-                                name="All Properties"
-                                stroke={propertyColors[0]}
-                                strokeWidth={2}
-                                dot={{ r: 4 }}
-                              />
-                            )
-                          } else {
-                            // Show individual property lines
-                            return properties
-                              .filter((property: any) => selectedExpenseUnits.has(property.id))
-                              .map((property: any, index: number) => (
-                                <Line
-                                  key={property.id}
-                                  type="monotone"
-                                  dataKey={property.id.toString()}
-                                  name={property.unit_name || property.property_name || `Property ${property.id}`}
-                                  stroke={propertyColors[index % propertyColors.length]}
-                                  strokeWidth={2}
-                                  dot={{ r: 4 }}
-                                />
-                              ))
-                          }
-                        })()}
+                          })
+                        }
+                      } else {
+                        return Array.from(selectedExpenseUnits).map((unitId, index) => {
+                          const unit = properties.find((p) => p.id === unitId)
+                          if (!unit) return null
+                          return (
+                            <Line
+                              key={unitId}
+                              type="monotone"
+                              dataKey={unit.unit_name}
+                              stroke={propertyColors[index % propertyColors.length]}
+                              strokeWidth={2}
+                              dot={false}
+                            />
+                          )
+                        })
+                      }
+                    })()}
                   </LineChart>
                 </ResponsiveContainer>
               </div>
             </Card>
 
             <div className="grid gap-6 md:grid-cols-2">
-              {/* Expense Category Breakdown */}
+              {/* Category Breakdown Chart */}
               <Card className="border-border bg-card">
                 <div className="p-6">
-                  <h2 className="mb-4 font-sans text-lg font-semibold text-foreground">Expense Category Breakdown</h2>
-                  <div className="mb-4 flex items-center justify-between">
-                    <p className="text-sm text-muted-foreground">Expense distribution by category</p>
-                    <Button variant="outline" size="sm">
-                      <FileDown className="mr-2 h-4 w-4" />
-                      Export
-                    </Button>
-                  </div>
+                  <h2 className="mb-4 font-sans text-lg font-semibold text-foreground">Category Breakdown</h2>
+                  <p className="mb-6 text-sm text-muted-foreground">Expense distribution by category</p>
 
+                  {/* DATE RANGE FILTER FOR CATEGORY BREAKDOWN */}
                   <div className="mb-4 flex flex-wrap items-center gap-3">
                     <div className="flex items-center gap-2">
                       <label className="text-sm font-medium text-muted-foreground">From:</label>
@@ -3813,1063 +3286,95 @@ export default function FinancialsPage() {
               {/* Property Expense Comparison */}
               <Card className="border-border bg-card">
                 <div className="p-6">
-                  <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <h2 className="font-sans text-lg font-semibold text-foreground">Property Expense Comparison</h2>
+                  <h2 className="mb-4 font-sans text-lg font-semibold text-foreground">Property Expense Comparison</h2>
+                  <p className="mb-6 text-sm text-muted-foreground">Compare expenses across properties</p>
 
-                    <div className="flex flex-wrap items-center gap-2">
-                      <div className="flex items-center gap-2">
-                        <label className="text-xs text-muted-foreground">From:</label>
-                        <Input
-                          type="date"
-                          value={propertyExpenseDateRange.start?.toISOString().split("T")[0] || ""}
-                          onChange={(e) =>
-                            setPropertyExpenseDateRange((prev) => ({
-                              ...prev,
-                              start: e.target.value ? new Date(e.target.value) : null,
-                            }))
-                          }
-                          className="h-8 w-36 text-xs"
-                        />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <label className="text-xs text-muted-foreground">To:</label>
-                        <Input
-                          type="date"
-                          value={propertyExpenseDateRange.end?.toISOString().split("T")[0] || ""}
-                          onChange={(e) =>
-                            setPropertyExpenseDateRange((prev) => ({
-                              ...prev,
-                              end: e.target.value ? new Date(e.target.value) : null,
-                            }))
-                          }
-                          className="h-8 w-36 text-xs"
-                        />
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          setPropertyExpenseDateRange({
-                            start: new Date(new Date().getFullYear(), 0, 1),
-                            end: new Date(new Date().getFullYear(), 11, 31),
-                          })
-                        }
-                        className="h-8 text-xs"
-                      >
-                        Reset
-                      </Button>
+                  {/* Property Expense Date Range Filter */}
+                  <div className="mb-4 flex flex-wrap items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm font-medium text-muted-foreground">From:</label>
+                      <input
+                        type="date"
+                        value={propertyExpenseDateRange.start?.toISOString().split("T")[0] || ""}
+                        onChange={(e) => {
+                          const newStart = e.target.value ? new Date(e.target.value) : null
+                          setPropertyExpenseDateRange((prev) => ({ ...prev, start: newStart }))
+                        }}
+                        className="rounded-md border border-border bg-background px-3 py-1.5 text-sm"
+                      />
                     </div>
-                  </div>
-
-                  <div className="mb-4 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm font-medium text-muted-foreground">To:</label>
+                      <input
+                        type="date"
+                        value={propertyExpenseDateRange.end?.toISOString().split("T")[0] || ""}
+                        onChange={(e) => {
+                          const newEnd = e.target.value ? new Date(e.target.value) : null
+                          setPropertyExpenseDateRange((prev) => ({ ...prev, end: newEnd }))
+                        }}
+                        className="rounded-md border border-border bg-background px-3 py-1.5 text-sm"
+                      />
+                    </div>
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       size="sm"
-                      onClick={selectAllPropertyExpenseProperties}
-                      className="h-7 text-xs text-blue-600 hover:text-blue-700"
+                      onClick={() => {
+                        const currentYear = new Date().getFullYear()
+                        setPropertyExpenseDateRange({
+                          start: new Date(currentYear, 0, 1),
+                          end: new Date(currentYear, 11, 31),
+                        })
+                      }}
                     >
-                      Select All
+                      Reset
                     </Button>
                   </div>
 
-                  <div className="mb-4 flex flex-wrap gap-2">
-                    {properties.map((property) => (
-                      <button
-                        key={property.id}
-                        onClick={() => togglePropertyExpenseProperty(property.id)}
-                        className={cn(
-                          "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-                          selectedPropertyExpenseProperties.includes(property.id)
-                            ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
-                            : "border-gray-300 bg-white text-gray-600 hover:border-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400",
-                        )}
-                      >
-                        {property.name}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="overflow-x-auto">
+                  <div className="max-h-[400px] overflow-y-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
                           <TableHead className="text-muted-foreground">Property</TableHead>
                           <TableHead className="text-right text-muted-foreground">Total Expenses</TableHead>
-                          <TableHead className="text-right text-muted-foreground">Avg Expense per Month</TableHead>
+                          <TableHead className="text-right text-muted-foreground">Avg Expense</TableHead>
+                          <TableHead className="text-center text-muted-foreground">Category Breakdown</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {filteredPropertyExpenseComparison.map((property) => (
-                          <TableRow key={property.propertyId}>
-                            <TableCell className="font-medium text-foreground">
-                              {getPropertyName(property.propertyId)}
-                            </TableCell>
-                            <TableCell className="text-right text-red-600 dark:text-red-400">
-                              GMD {formatCurrency(property.totalExpenses)}
-                            </TableCell>
-                            <TableCell className="text-right text-foreground">
-                              GMD {formatCurrency(property.avgExpensePerMonth)}
+                        {filteredPropertyExpenseComparison.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={4} className="text-center text-muted-foreground">
+                              No expense data available for selected properties and date range.
                             </TableCell>
                           </TableRow>
-                        ))}
+                        ) : (
+                          filteredPropertyExpenseComparison.map((property: any) => (
+                            <TableRow key={property.propertyId}>
+                              <TableCell className="font-medium text-foreground">
+                                {getPropertyName(property.propertyId)}
+                              </TableCell>
+                              <TableCell className="text-right text-red-600 dark:text-red-400">
+                                GMD {formatCurrency(property.totalExpenses)}
+                              </TableCell>
+                              <TableCell className="text-right text-foreground">
+                                GMD {formatCurrency(property.averageExpense)}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                {/* Placeholder for category breakdown chart or summary */}
+                                <Button variant="outline" size="xs">
+                                  View Details
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
                       </TableBody>
                     </Table>
                   </div>
                 </div>
               </Card>
             </div>
-
-            {/* Quick Add Expense Form */}
-            <Card className="border-border bg-card">
-              <CardHeader>
-                <CardTitle className="font-sans text-xl font-semibold text-foreground">Quick Add Expense</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleQuickExpenseSubmit} className="grid gap-4 md:grid-cols-5">
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-muted-foreground">Property</label>
-                    <Select
-                      value={quickExpenseData.property_id}
-                      onValueChange={(value) => {
-                        console.log("[v0] Property selected:", value)
-                        setQuickExpenseData((prev) => ({ ...prev, property_id: value }))
-                      }}
-                      disabled={submittingQuickExpense}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select property">
-                          {quickExpenseData.property_id === "all"
-                            ? "Portfolio Wide"
-                            : (() => {
-                                // Find if it's a building (property_name) or unit (id)
-                                const selectedProperty = properties.find(
-                                  (p) => String(p.id) === quickExpenseData.property_id,
-                                )
-                                if (selectedProperty) {
-                                  return selectedProperty.unit_name || selectedProperty.name
-                                }
-                                // Check if it's a building selection (format: "building:BuildingName")
-                                if (quickExpenseData.property_id.startsWith("building:")) {
-                                  return quickExpenseData.property_id.replace("building:", "")
-                                }
-                                return "Select property"
-                              })()}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent className="max-h-[400px]">
-                        <SelectItem value="all">Portfolio Wide</SelectItem>
-
-                        {/* Group properties by building */}
-                        {(() => {
-                          // Create building groups
-                          const buildingMap = new Map<string, typeof properties>()
-                          const standaloneProperties: typeof properties = []
-
-                          properties.forEach((property) => {
-                            if (property.property_name && property.building_id) {
-                              // Property belongs to a building
-                              if (!buildingMap.has(property.property_name)) {
-                                buildingMap.set(property.property_name, [])
-                              }
-                              buildingMap.get(property.property_name)!.push(property)
-                            } else {
-                              // Standalone property
-                              standaloneProperties.push(property)
-                            }
-                          })
-
-                          return (
-                            <>
-                              {/* Render buildings with nested units */}
-                              {Array.from(buildingMap.entries()).map(([buildingName, units]) => (
-                                <div key={buildingName} className="border-b border-border last:border-0">
-                                  {/* Building option - selects all units in building */}
-                                  <SelectItem value={`building:${buildingName}`} className="font-semibold bg-muted/50">
-                                    {buildingName} (All Units)
-                                  </SelectItem>
-
-                                  {/* Individual units within building */}
-                                  <div className="pl-4 bg-muted/20">
-                                    {units.map((unit) => (
-                                      <SelectItem key={unit.id} value={String(unit.id)} className="text-sm">
-                                        ↳ {unit.unit_name || unit.name}
-                                      </SelectItem>
-                                    ))}
-                                  </div>
-                                </div>
-                              ))}
-
-                              {/* Render standalone properties */}
-                              {standaloneProperties.length > 0 && (
-                                <div className="border-t border-border pt-1">
-                                  {standaloneProperties.map((property) => (
-                                    <SelectItem key={property.id} value={String(property.id)}>
-                                      {property.unit_name || property.name}
-                                    </SelectItem>
-                                  ))}
-                                </div>
-                              )}
-                            </>
-                          )
-                        })()}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-muted-foreground">Category *</label>
-                    <Select
-                      value={quickExpenseData.category}
-                      onValueChange={handleQuickExpenseCategoryChange}
-                      disabled={submittingQuickExpense}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {expenseCategories.map((category) => (
-                          <SelectItem key={category.id} value={category.name}>
-                            {category.display_name}
-                          </SelectItem>
-                        ))}
-                        <SelectItem value="add_new" className="text-blue-600 font-medium">
-                          + Add New Category
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-muted-foreground">Amount (GMD) *</label>
-                    <Input
-                      id="quick-amount"
-                      type="number"
-                      placeholder="0.00"
-                      value={quickExpenseData.amount}
-                      onChange={(e) => setQuickExpenseData((prev) => ({ ...prev, amount: e.target.value }))}
-                      disabled={submittingQuickExpense}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-muted-foreground">Date *</label>
-                    <Input
-                      id="quick-date"
-                      type="date"
-                      value={quickExpenseData.date}
-                      onChange={(e) => setQuickExpenseData((prev) => ({ ...prev, date: e.target.value }))}
-                      disabled={submittingQuickExpense}
-                      required
-                    />
-                  </div>
-                  <div className="flex items-end">
-                    <Button
-                      type="submit"
-                      className="w-full bg-[#3B82F6] hover:bg-[#2563EB]"
-                      disabled={submittingQuickExpense}
-                    >
-                      {submittingQuickExpense ? "Adding..." : "Add Expense"}
-                    </Button>
-                  </div>
-                </form>
-              </CardContent>
-            </Card>
-
-            <Card className="border-border bg-card">
-              <div className="p-6">
-                <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <h2 className="font-sans text-lg font-semibold text-foreground">Recurring Expenses</h2>
-                    <p className="text-sm text-muted-foreground">Scheduled recurring expenses for the next 3 months</p>
-                  </div>
-                  <Button variant="outline" size="sm" onClick={() => setShowRecurringModal(true)}>
-                    Add Recurring
-                  </Button>
-                </div>
-
-                <div className="max-h-[400px] space-y-3 overflow-y-auto pr-2">
-                  {recurringExpenses.length === 0 ? (
-                    <div className="py-8 text-center">
-                      <p className="text-muted-foreground">No recurring expenses set up yet</p>
-                      <p className="mt-2 text-sm text-muted-foreground">
-                        Click "Add Recurring" to set up your first recurring expense
-                      </p>
-                    </div>
-                  ) : (
-                    recurringExpenses.map((expense) => {
-                      const propertyName = expense.property_id
-                        ? properties.find((p) => p.id === expense.property_id)?.unit_name ||
-                          properties.find((p) => p.id === expense.property_id)?.name ||
-                          "Unknown"
-                        : "Portfolio Wide"
-
-                      const categoryDisplay =
-                        expense.category.charAt(0).toUpperCase() + expense.category.slice(1).replace(/_/g, " ")
-
-                      return (
-                        <div
-                          key={expense.id}
-                          className="flex items-center justify-between rounded-lg border border-border bg-card p-4"
-                        >
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <h4 className="font-medium text-foreground">{expense.description}</h4>
-                              <Badge variant="secondary" className="text-xs">
-                                {expense.recurring_frequency}
-                              </Badge>
-                            </div>
-                            <div className="mt-1 flex items-center gap-4 text-sm text-muted-foreground">
-                              <span>{propertyName}</span>
-                              <span>•</span>
-                              <span>{categoryDisplay}</span>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-semibold text-foreground">
-                              GMD {Number.parseFloat(expense.amount).toLocaleString()}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              Next: {new Date(expense.expense_date).toLocaleDateString()}
-                            </p>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEditRecurringExpense(expense)}
-                            className="ml-2"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )
-                    })
-                  )}
-                </div>
-              </div>
-            </Card>
-
-            <Card className="border-border bg-card">
-              <div className="p-6">
-                <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <h2 className="font-sans text-lg font-semibold text-foreground">Expenses</h2>
-                    <p className="text-sm text-muted-foreground">Complete expense history with advanced filters</p>
-                  </div>
-                  <Button variant="outline" size="sm">
-                    <FileDown className="mr-2 h-4 w-4" />
-                    Export
-                  </Button>
-                </div>
-
-                {/* Filters */}
-                <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
-                  <Select value={expenseListPropertyFilter} onValueChange={setExpenseListPropertyFilter}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All Properties" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Properties</SelectItem>
-                      <SelectItem value="portfolio">Portfolio Wide</SelectItem>
-                      {properties.map((property) => (
-                        <SelectItem key={property.id} value={String(property.id)}>
-                          {property.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  <Select value={expenseListCategoryFilter} onValueChange={setExpenseListCategoryFilter}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All Categories" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Categories</SelectItem>
-                      <SelectItem value="Maintenance">Maintenance</SelectItem>
-                      <SelectItem value="Utilities">Utilities</SelectItem>
-                      <SelectItem value="Insurance">Insurance</SelectItem>
-                      <SelectItem value="Taxes">Taxes</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  <Input
-                    type="number"
-                    placeholder="Min Amount"
-                    value={expenseListAmountMin}
-                    onChange={(e) => setExpenseListAmountMin(e.target.value)}
-                  />
-
-                  <Input
-                    type="number"
-                    placeholder="Max Amount"
-                    value={expenseListAmountMax}
-                    onChange={(e) => setExpenseListAmountMax(e.target.value)}
-                  />
-
-                  <Input
-                    type="date"
-                    placeholder="From Date"
-                    value={expenseListDateFrom}
-                    onChange={(e) => setExpenseListDateFrom(e.target.value)}
-                  />
-
-                  <Input
-                    type="date"
-                    placeholder="To Date"
-                    value={expenseListDateTo}
-                    onChange={(e) => setExpenseListDateTo(e.target.value)}
-                  />
-                </div>
-
-                {/* Expenses Table */}
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-muted-foreground">Date</TableHead>
-                        <TableHead className="text-muted-foreground">Description</TableHead>
-                        <TableHead className="text-muted-foreground">Category</TableHead>
-                        <TableHead className="text-muted-foreground">Property</TableHead>
-                        <TableHead className="text-right text-muted-foreground">Amount</TableHead>
-                        <TableHead className="text-center text-muted-foreground">Receipt</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredExpensesList.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center text-muted-foreground">
-                            No expenses found
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        filteredExpensesList.map((expense) => (
-                          <TableRow key={expense.id}>
-                            <TableCell className="text-foreground">
-                              {new Date(expense.date).toLocaleDateString()}
-                            </TableCell>
-                            <TableCell className="font-medium text-foreground">{expense.description}</TableCell>
-                            <TableCell>
-                              <Badge
-                                variant="secondary"
-                                className={cn(
-                                  expense.category === "Maintenance"
-                                    ? "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
-                                    : expense.category === "Utilities"
-                                      ? "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300"
-                                      : expense.category === "Insurance"
-                                        ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
-                                        : expense.category === "Taxes"
-                                          ? "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300"
-                                          : "bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300",
-                                )}
-                              >
-                                {expense.category}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-foreground">
-                              {expense.property === "Portfolio Wide"
-                                ? "Portfolio Wide"
-                                : getPropertyName(expense.property)}
-                            </TableCell>
-                            <TableCell className="text-right font-semibold text-red-600 dark:text-red-400">
-                              GMD {formatCurrency(Number.parseFloat(expense.amount))} {/* Parse amount */}
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <Badge
-                                variant="default"
-                                className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
-                              >
-                                Available
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Button variant="ghost" size="sm" onClick={() => handleEditExpense(expense)}>
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
-            </Card>
           </TabsContent>
-
-          {/* Recurring Expense Modal */}
-          <Dialog open={showRecurringModal} onOpenChange={setShowRecurringModal}>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Add Recurring Expense</DialogTitle>
-              </DialogHeader>
-              <CardContent>
-                <form onSubmit={handleRecurringExpenseSubmit} className="space-y-4">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="recurring-description">Description *</Label>
-                      <Input
-                        id="recurring-description"
-                        placeholder="e.g., Monthly HOA Fee"
-                        value={recurringExpenseData.description}
-                        onChange={(e) => setRecurringExpenseData((prev) => ({ ...prev, description: e.target.value }))}
-                        disabled={submittingRecurringExpense}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="recurring-amount">Amount (GMD) *</Label>
-                      <Input
-                        id="recurring-amount"
-                        type="number"
-                        placeholder="0.00"
-                        value={recurringExpenseData.amount}
-                        onChange={(e) => setRecurringExpenseData((prev) => ({ ...prev, amount: e.target.value }))}
-                        disabled={submittingRecurringExpense}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="recurring-category">Category *</Label>
-                      <Select
-                        value={recurringExpenseData.category}
-                        onValueChange={handleRecurringExpenseCategoryChange}
-                        disabled={submittingRecurringExpense}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {expenseCategories.map((category) => (
-                            <SelectItem key={category.id} value={category.name}>
-                              {category.display_name}
-                            </SelectItem>
-                          ))}
-                          <SelectItem value="add_new" className="text-blue-600 font-medium">
-                            + Add New Category
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="recurring-frequency">Frequency *</Label>
-                      <Select
-                        value={recurringExpenseData.recurring_frequency}
-                        onValueChange={(value) =>
-                          setRecurringExpenseData((prev) => ({ ...prev, recurring_frequency: value }))
-                        }
-                        disabled={submittingRecurringExpense}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="weekly">Weekly</SelectItem>
-                          <SelectItem value="monthly">Monthly</SelectItem>
-                          <SelectItem value="quarterly">Quarterly</SelectItem>
-                          <SelectItem value="yearly">Yearly</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div>
-                      <label className="mb-1 block text-sm font-medium text-muted-foreground">Property</label>
-                      <Select
-                        value={recurringExpenseData.property_id}
-                        onValueChange={(value) => {
-                          console.log("[v0] Recurring expense property selected:", value)
-                          setRecurringExpenseData((prev) => ({ ...prev, property_id: value }))
-                        }}
-                        disabled={submittingRecurringExpense}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select property">
-                            {recurringExpenseData.property_id === "all"
-                              ? "Portfolio Wide"
-                              : (() => {
-                                  const selectedProperty = properties.find(
-                                    (p) => String(p.id) === recurringExpenseData.property_id,
-                                  )
-                                  // If a property is found, display its building and unit name.
-                                  // Otherwise, default to "Select property".
-                                  return selectedProperty
-                                    ? `${selectedProperty.property_name} - ${selectedProperty.unit_name}`
-                                    : "Select property"
-                                })()}
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Portfolio Wide</SelectItem>
-                          {(() => {
-                            // Group properties by building
-                            const groupedProperties = properties.reduce(
-                              (acc, property) => {
-                                const buildingName = property.property_name || "Ungrouped"
-                                if (!acc[buildingName]) {
-                                  acc[buildingName] = []
-                                }
-                                acc[buildingName].push(property)
-                                return acc
-                              },
-                              {} as Record<string, typeof properties>,
-                            )
-
-                            return Object.entries(groupedProperties).map(([buildingName, units]) => (
-                              <div key={buildingName}>
-                                <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
-                                  {buildingName}
-                                </div>
-                                {units.map((property) => (
-                                  <SelectItem key={property.id} value={String(property.id)} className="pl-6">
-                                    {property.unit_name}
-                                  </SelectItem>
-                                ))}
-                              </div>
-                            ))
-                          })()}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="recurring-date">Start Date *</Label>
-                      <Input
-                        id="recurring-date"
-                        type="date"
-                        value={recurringExpenseData.expense_date}
-                        onChange={(e) => setRecurringExpenseData((prev) => ({ ...prev, expense_date: e.target.value }))}
-                        disabled={submittingRecurringExpense}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setShowRecurringModal(false)}
-                      disabled={submittingRecurringExpense}
-                    >
-                      Cancel
-                    </Button>
-                    <Button type="submit" disabled={submittingRecurringExpense}>
-                      {submittingRecurringExpense ? "Adding..." : "Add Recurring Expense"}
-                    </Button>
-                  </div>
-                </form>
-              </CardContent>
-            </DialogContent>
-          </Dialog>
-
-          <Dialog open={showEditExpenseModal} onOpenChange={setShowEditExpenseModal}>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle className="font-sans text-xl font-semibold">Edit Expense</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleEditExpenseSubmit} className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-muted-foreground">Property</label>
-                    <Select
-                      value={editExpenseData.property_id}
-                      onValueChange={(value) => setEditExpenseData((prev) => ({ ...prev, property_id: value }))}
-                      disabled={submittingEditExpense}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select property">
-                          {editExpenseData.property_id === "all"
-                            ? "Portfolio Wide"
-                            : (() => {
-                                const selectedProperty = properties.find(
-                                  (p) => String(p.id) === editExpenseData.property_id,
-                                )
-                                if (selectedProperty) {
-                                  return selectedProperty.unit_name || selectedProperty.name
-                                }
-                                if (editExpenseData.property_id.startsWith("building:")) {
-                                  return editExpenseData.property_id.replace("building:", "")
-                                }
-                                return "Select property"
-                              })()}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent className="max-h-[400px]">
-                        <SelectItem value="all">Portfolio Wide</SelectItem>
-                        {(() => {
-                          const buildingMap = new Map<string, typeof properties>()
-                          const standaloneProperties: typeof properties = []
-
-                          properties.forEach((property) => {
-                            if (property.property_name && property.building_id) {
-                              if (!buildingMap.has(property.property_name)) {
-                                buildingMap.set(property.property_name, [])
-                              }
-                              buildingMap.get(property.property_name)!.push(property)
-                            } else {
-                              standaloneProperties.push(property)
-                            }
-                          })
-
-                          return (
-                            <>
-                              {Array.from(buildingMap.entries()).map(([buildingName, units]) => (
-                                <div key={buildingName} className="border-b border-border last:border-0">
-                                  <SelectItem value={`building:${buildingName}`} className="font-semibold bg-muted/50">
-                                    {buildingName} (All Units)
-                                  </SelectItem>
-                                  <div className="pl-4 bg-muted/20">
-                                    {units.map((unit) => (
-                                      <SelectItem key={unit.id} value={String(unit.id)} className="text-sm">
-                                        ↳ {unit.unit_name || unit.name}
-                                      </SelectItem>
-                                    ))}
-                                  </div>
-                                </div>
-                              ))}
-                              {standaloneProperties.length > 0 && (
-                                <div className="border-t border-border pt-1">
-                                  {standaloneProperties.map((property) => (
-                                    <SelectItem key={property.id} value={String(property.id)}>
-                                      {property.unit_name || property.name}
-                                    </SelectItem>
-                                  ))}
-                                </div>
-                              )}
-                            </>
-                          )
-                        })()}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-muted-foreground">Category *</label>
-                    <Select
-                      value={editExpenseData.category}
-                      onValueChange={(value) => setEditExpenseData((prev) => ({ ...prev, category: value }))}
-                      disabled={submittingEditExpense}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {expenseCategories.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.name.toLowerCase()}>
-                            {cat.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-muted-foreground">Amount (GMD) *</label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={editExpenseData.amount}
-                      onChange={(e) => setEditExpenseData((prev) => ({ ...prev, amount: e.target.value }))}
-                      placeholder="0.00"
-                      required
-                      disabled={submittingEditExpense}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-muted-foreground">Date *</label>
-                    <Input
-                      type="date"
-                      value={editExpenseData.date}
-                      onChange={(e) => setEditExpenseData((prev) => ({ ...prev, date: e.target.value }))}
-                      required
-                      disabled={submittingEditExpense}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-muted-foreground">Description</label>
-                    <Input
-                      type="text"
-                      value={editExpenseData.description}
-                      onChange={(e) => setEditExpenseData((prev) => ({ ...prev, description: e.target.value }))}
-                      placeholder="Brief description"
-                      disabled={submittingEditExpense}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-muted-foreground">Vendor</label>
-                    <Input
-                      type="text"
-                      value={editExpenseData.vendor}
-                      onChange={(e) => setEditExpenseData((prev) => ({ ...prev, vendor: e.target.value }))}
-                      placeholder="Vendor name"
-                      disabled={submittingEditExpense}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-muted-foreground">Payment Method</label>
-                    <Select
-                      value={editExpenseData.payment_method}
-                      onValueChange={(value) => setEditExpenseData((prev) => ({ ...prev, payment_method: value }))}
-                      disabled={submittingEditExpense}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="cash">Cash</SelectItem>
-                        <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                        <SelectItem value="credit_card">Credit Card</SelectItem>
-                        <SelectItem value="check">Check</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowEditExpenseModal(false)}
-                    disabled={submittingEditExpense}
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={submittingEditExpense}>
-                    {submittingEditExpense ? "Updating..." : "Update Expense"}
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
-
-          <Dialog open={showEditRecurringModal} onOpenChange={setShowEditRecurringModal}>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle className="font-sans text-xl font-semibold">Edit Recurring Expense</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleEditRecurringExpenseSubmit} className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-muted-foreground">Property</label>
-                    <Select
-                      value={editRecurringExpenseData.property_id}
-                      onValueChange={(value) =>
-                        setEditRecurringExpenseData((prev) => ({ ...prev, property_id: value }))
-                      }
-                      disabled={submittingEditRecurringExpense}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select property">
-                          {editRecurringExpenseData.property_id === "all"
-                            ? "Portfolio Wide"
-                            : (() => {
-                                const selectedProperty = properties.find(
-                                  (p) => String(p.id) === editRecurringExpenseData.property_id,
-                                )
-                                if (selectedProperty) {
-                                  return selectedProperty.unit_name || selectedProperty.name
-                                }
-                                if (editRecurringExpenseData.property_id.startsWith("building:")) {
-                                  return editRecurringExpenseData.property_id.replace("building:", "")
-                                }
-                                return "Select property"
-                              })()}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent className="max-h-[400px]">
-                        <SelectItem value="all">Portfolio Wide</SelectItem>
-                        {(() => {
-                          const buildingMap = new Map<string, typeof properties>()
-                          const standaloneProperties: typeof properties = []
-
-                          properties.forEach((property) => {
-                            if (property.property_name && property.building_id) {
-                              if (!buildingMap.has(property.property_name)) {
-                                buildingMap.set(property.property_name, [])
-                              }
-                              buildingMap.get(property.property_name)!.push(property)
-                            } else {
-                              standaloneProperties.push(property)
-                            }
-                          })
-
-                          return (
-                            <>
-                              {Array.from(buildingMap.entries()).map(([buildingName, units]) => (
-                                <div key={buildingName} className="border-b border-border last:border-0">
-                                  <SelectItem value={`building:${buildingName}`} className="font-semibold bg-muted/50">
-                                    {buildingName} (All Units)
-                                  </SelectItem>
-                                  <div className="pl-4 bg-muted/20">
-                                    {units.map((unit) => (
-                                      <SelectItem key={unit.id} value={String(unit.id)} className="text-sm">
-                                        ↳ {unit.unit_name || unit.name}
-                                      </SelectItem>
-                                    ))}
-                                  </div>
-                                </div>
-                              ))}
-                              {standaloneProperties.length > 0 && (
-                                <div className="border-t border-border pt-1">
-                                  {standaloneProperties.map((property) => (
-                                    <SelectItem key={property.id} value={String(property.id)}>
-                                      {property.unit_name || property.name}
-                                    </SelectItem>
-                                  ))}
-                                </div>
-                              )}
-                            </>
-                          )
-                        })()}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-muted-foreground">Category *</label>
-                    <Select
-                      value={editRecurringExpenseData.category}
-                      onValueChange={(value) => setEditRecurringExpenseData((prev) => ({ ...prev, category: value }))}
-                      disabled={submittingEditRecurringExpense}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {expenseCategories.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.name.toLowerCase()}>
-                            {cat.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-muted-foreground">Amount (GMD) *</label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={editRecurringExpenseData.amount}
-                      onChange={(e) => setEditRecurringExpenseData((prev) => ({ ...prev, amount: e.target.value }))}
-                      placeholder="0.00"
-                      required
-                      disabled={submittingEditRecurringExpense}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-muted-foreground">Frequency *</label>
-                    <Select
-                      value={editRecurringExpenseData.recurring_frequency}
-                      onValueChange={(value) =>
-                        setEditRecurringExpenseData((prev) => ({ ...prev, recurring_frequency: value }))
-                      }
-                      disabled={submittingEditRecurringExpense}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="daily">Daily</SelectItem>
-                        <SelectItem value="weekly">Weekly</SelectItem>
-                        <SelectItem value="monthly">Monthly</SelectItem>
-                        <SelectItem value="quarterly">Quarterly</SelectItem>
-                        <SelectItem value="yearly">Yearly</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-muted-foreground">Next Due Date *</label>
-                    <Input
-                      type="date"
-                      value={editRecurringExpenseData.date}
-                      onChange={(e) => setEditRecurringExpenseData((prev) => ({ ...prev, date: e.target.value }))}
-                      required
-                      disabled={submittingEditRecurringExpense}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-muted-foreground">Description *</label>
-                    <Input
-                      type="text"
-                      value={editRecurringExpenseData.description}
-                      onChange={(e) =>
-                        setEditRecurringExpenseData((prev) => ({ ...prev, description: e.target.value }))
-                      }
-                      placeholder="Brief description"
-                      required
-                      disabled={submittingEditRecurringExpense}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-muted-foreground">Vendor</label>
-                    <Input
-                      type="text"
-                      value={editRecurringExpenseData.vendor}
-                      onChange={(e) => setEditRecurringExpenseData((prev) => ({ ...prev, vendor: e.target.value }))}
-                      placeholder="Vendor name"
-                      disabled={submittingEditRecurringExpense}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-muted-foreground">Payment Method</label>
-                    <Select
-                      value={editRecurringExpenseData.payment_method}
-                      onValueChange={(value) =>
-                        setEditRecurringExpenseData((prev) => ({ ...prev, payment_method: value }))
-                      }
-                      disabled={submittingEditRecurringExpense}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="cash">Cash</SelectItem>
-                        <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                        <SelectItem value="credit_card">Credit Card</SelectItem>
-                        <SelectItem value="check">Check</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowEditRecurringModal(false)}
-                    disabled={submittingEditRecurringExpense}
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={submittingEditRecurringExpense}>
-                    {submittingEditRecurringExpense ? "Updating..." : "Update Recurring Expense"}
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
-
-          {/* Add Category Modal */}
-          <AddCategoryModal
-            open={showAddCategoryModal}
-            onOpenChange={setShowAddCategoryModal}
-            onCategoryAdded={() => {
-              fetchExpenseCategories()
-            }}
-          />
         </Tabs>
       </div>
     </MinimumLoadingWrapper>

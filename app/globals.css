@@ -39,7 +39,9 @@
   --sidebar-accent-foreground: oklch(0.15 0 0); /* Dark text */
   --sidebar-border: oklch(0.88 0 0); /* Subtle border */
   --sidebar-ring: oklch(0.85 0.15 195); /* Cyan ring */
+  /* Updated font variables for sharp, tech-focused typography */
   --font-inter: "Inter", sans-serif;
+  --font-space-grotesk: "Space Grotesk", sans-serif;
   --font-jetbrains-mono: "JetBrains Mono", monospace;
 }
 
@@ -81,8 +83,9 @@
 }
 
 @theme inline {
-  /* Updated font variables to match Inter and JetBrains Mono */
-  --font-sans: var(--font-inter);
+  /* Using Space Grotesk as primary sans font for sharp, tech-focused look */
+  --font-sans: var(--font-space-grotesk);
+  --font-body: var(--font-inter);
   --font-mono: var(--font-jetbrains-mono);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -184,7 +187,23 @@
     @apply border-border outline-ring/50;
   }
   body {
+    /* Using Inter for body text for better readability, Space Grotesk for headings */
     @apply bg-background text-foreground;
+    font-family: var(--font-inter);
+  }
+  /* Apply Space Grotesk to headings, nav items, and buttons for sharp tech look */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  nav,
+  button,
+  [role="button"] {
+    font-family: var(--font-space-grotesk);
+    font-weight: 500;
+    letter-spacing: -0.01em;
   }
 }
 

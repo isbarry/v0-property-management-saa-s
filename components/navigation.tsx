@@ -2,7 +2,6 @@
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { cn } from "@/lib/utils"
 import Image from "next/image"
 import { LayoutDashboard, Calendar, Users, DollarSign, Sun, Moon, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -65,58 +64,73 @@ export function Navigation({ theme, onToggleTheme }: NavigationProps) {
       .toUpperCase() || "U"
 
   return (
-    <nav className="border-b border-border bg-card">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="grid h-16 grid-cols-[auto_1fr_auto] items-center gap-4">
-          <div className="flex items-center">
-            <Link href="/dashboard" className="flex items-center gap-[1px]">
-              <Image src="/logo.svg" alt="Logo" width={69} height={69} className="h-[69px] w-[69px]" />
-              <span className="bg-gradient-to-r from-[#0ce6f0] to-[#2256f7] bg-clip-text text-[1.65rem] font-bold leading-none text-transparent">
-                Tabax
-              </span>
+    <nav className="flex h-screen w-64 flex-col border-r border-border bg-card">
+      {/* Logo Section */}
+      <div className="flex h-16 items-center border-b border-border px-4">
+        <Link href="/dashboard" className="flex items-center gap-[1px]">
+          <Image src="/logo.svg" alt="Logo" width={40} height={40} className="h-10 w-10" />
+          <span className="bg-gradient-to-r from-[#0ce6f0] to-[#2256f7] bg-clip-text text-xl font-bold leading-none text-transparent">
+            Tabax
+          </span>
+        </Link>
+      </div>
+
+      {/* Navigation Items */}
+      <div className="flex flex-1 flex-col gap-1 overflow-y-auto p-4">
+        {navItems.map((item) => {
+          const Icon = item.icon
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+            >
+              <Icon className="h-5 w-5" />
+              {item.label}
             </Link>
-          </div>
+          )
+        })}
+      </div>
 
-          <div className="flex justify-center gap-1">
-            {navItems.map((item) => {
-              const Icon = item.icon
-              const isActive = pathname === item.href
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                    isActive
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  {item.label}
-                </Link>
-              )
-            })}
-          </div>
+      {/* Bottom Section - User Profile & Actions */}
+      <div className="border-t border-border p-4">
+        <div className="flex flex-col gap-2">
+          {/* User Profile Button */}
+          <Button
+            variant="ghost"
+            className="h-auto w-full justify-start gap-3 p-2"
+            onClick={() => router.push("/profile")}
+          >
+            <Avatar className="h-8 w-8">
+              <AvatarImage src={user?.photo_url || "/placeholder.svg"} alt={user?.name} />
+              <AvatarFallback>{initials}</AvatarFallback>
+            </Avatar>
+            <div className="flex flex-1 flex-col items-start text-left">
+              <span className="text-sm font-medium">{user?.name || "User"}</span>
+              <span className="text-xs text-muted-foreground">{user?.email || ""}</span>
+            </div>
+          </Button>
 
-          <div className="flex items-center justify-end gap-2">
-            <Button variant="ghost" size="icon" onClick={onToggleTheme} className="rounded-full">
-              {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-            </Button>
-
-            <Button variant="ghost" size="icon" onClick={handleLogout} className="rounded-full" title="Log out">
-              <LogOut className="h-5 w-5" />
+          {/* Action Buttons */}
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={onToggleTheme}
+              className="flex-1 bg-transparent"
+              title="Toggle theme"
+            >
+              {theme === "light" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
             </Button>
 
             <Button
-              variant="ghost"
-              className="relative h-10 w-10 rounded-full p-0"
-              onClick={() => router.push("/profile")}
+              variant="outline"
+              size="icon"
+              onClick={handleLogout}
+              className="flex-1 bg-transparent"
+              title="Log out"
             >
-              <Avatar className="h-10 w-10">
-                <AvatarImage src={user?.photo_url || "/placeholder.svg"} alt={user?.name} />
-                <AvatarFallback>{initials}</AvatarFallback>
-              </Avatar>
+              <LogOut className="h-4 w-4" />
             </Button>
           </div>
         </div>
