@@ -17,7 +17,8 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { SVGDonutChart } from "@/components/charts/svg-donut-chart"
 
-type FinancialsTab = "overview" | "revenue" | "expenses"
+// REMOVED "revenue" from FinancialsTab type
+type FinancialsTab = "overview" | "expenses"
 
 type RecurringExpense = {
   id: number
@@ -1545,1405 +1546,805 @@ export default function FinancialsPage() {
 
   return (
     <MinimumLoadingWrapper skeleton={<FinancialsLoading />} delay={1000}>
-      <div className="mx-auto max-w-7xl space-y-6 p-6" data-onboarding="financials-page">
+      <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="font-sans text-3xl font-bold tracking-tight text-foreground">Financials</h1>
-            <p className="text-sm text-muted-foreground">Track revenue, expenses, and financial performance</p>
+        <div className="mx-auto max-w-7xl space-y-6 p-6">
+          <div className="flex items-center justify-between">
+            <h1 className="font-sans text-3xl font-bold text-foreground">Financials Overview</h1>
           </div>
-        </div>
 
-        <Tabs defaultValue="overview" className="space-y-6">
-          {/* Tab Navigation */}
-          {/* <TabsList className="grid w-full grid-cols-2"> */}
-          <TabsList className="inline-flex rounded-lg bg-muted p-1">
-            <TabsTrigger
-              value="overview"
-              onClick={() => setActiveTab("overview")}
-              className={cn(
-                "rounded-md px-6 py-2 text-sm font-semibold transition-colors data-[state=active]:bg-[#3B82F6] data-[state=active]:text-white data-[state=active]:hover:bg-[#2563EB]",
-                "bg-transparent text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800",
-              )}
-            >
-              Overview
-            </TabsTrigger>
-            <TabsTrigger
-              value="revenue"
-              onClick={() => setActiveTab("revenue")}
-              className={cn(
-                "rounded-md px-6 py-2 text-sm font-semibold transition-colors data-[state=active]:bg-[#3B82F6] data-[state=active]:text-white data-[state=active]:hover:bg-[#2563EB]",
-                "bg-transparent text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800",
-              )}
-            >
-              Revenue
-            </TabsTrigger>
-            {/* <TabsTrigger value="expenses">Expenses</TabsTrigger> */}
-          </TabsList>
-
-          <TabsContent value="overview" className="space-y-6">
-            {/* Financial Summary Cards */}
-            <div className="grid gap-4 md:grid-cols-3">
-              <Card className="border-border bg-[#D1FAE5] dark:bg-[#064E3B]">
-                <CardContent className="p-6">
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">YTD Revenue</p>
-                    <p className="font-sans text-2xl font-bold text-gray-900 dark:text-white">
-                      GMD {formatCurrency(ytdRevenue)}
-                    </p>
-                    <div className="flex items-center text-sm text-green-700 dark:text-green-400">
-                      <ArrowUpRight className="mr-1 h-4 w-4" />
-                      +12% vs last year
-                    </div>
+          {/* Financial Summary Cards */}
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card className="border-border bg-[#D1FAE5] dark:bg-[#064E3B]">
+              <CardContent className="p-6">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">YTD Revenue</p>
+                  <p className="font-sans text-2xl font-bold text-gray-900 dark:text-white">
+                    GMD {formatCurrency(ytdRevenue)}
+                  </p>
+                  <div className="flex items-center text-sm text-green-700 dark:text-green-400">
+                    <ArrowUpRight className="mr-1 h-4 w-4" />
+                    +12% vs last year
                   </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-border bg-[#FEE2E2] dark:bg-[#7F1D1D]">
-                <CardContent className="p-6">
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">YTD Expenses</p>
-                    <p className="font-sans text-2xl font-bold text-gray-900 dark:text-white">
-                      GMD {formatCurrency(ytdExpenses)}
-                    </p>
-                    <div className="flex items-center text-sm text-red-700 dark:text-red-400">
-                      <ArrowUpRight className="mr-1 h-4 w-4" />
-                      +8% vs last year
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-border bg-[#DBEAFE] dark:bg-[#1E3A8A]">
-                <CardContent className="p-6">
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">YTD Net Profit</p>
-                    <p
-                      className={cn(
-                        "font-sans text-2xl font-bold",
-                        ytdProfit >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400",
-                      )}
-                    >
-                      GMD {formatCurrency(ytdProfit)}
-                    </p>
-                    <div className="flex items-center text-sm text-green-700 dark:text-green-400">
-                      <ArrowUpRight className="mr-1 h-4 w-4" />
-                      +15% vs last year
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Profit & Loss Chart */}
-            <Card className="border-border bg-card" data-onboarding="profit-card">
-              <div className="p-6">
-                <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <h2 className="font-sans text-lg font-semibold text-foreground">Profit & Loss</h2>
-                    <p className="text-sm text-muted-foreground">Monthly profit and loss trends</p>
-                  </div>
-                  <Button variant="outline" size="sm">
-                    <FileDown className="mr-2 h-4 w-4" />
-                    Export
-                  </Button>
                 </div>
+              </CardContent>
+            </Card>
 
-                <div className="mb-4 flex flex-col gap-3">
-                  <div className="flex flex-wrap items-center gap-2">
+            <Card className="border-border bg-[#FEE2E2] dark:bg-[#7F1D1D]">
+              <CardContent className="p-6">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">YTD Expenses</p>
+                  <p className="font-sans text-2xl font-bold text-gray-900 dark:text-white">
+                    GMD {formatCurrency(ytdExpenses)}
+                  </p>
+                  <div className="flex items-center text-sm text-red-700 dark:text-red-400">
+                    <ArrowUpRight className="mr-1 h-4 w-4" />
+                    +8% vs last year
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border bg-[#DBEAFE] dark:bg-[#1E3A8A]">
+              <CardContent className="p-6">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">YTD Net Profit</p>
+                  <p
+                    className={cn(
+                      "font-sans text-2xl font-bold",
+                      ytdProfit >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400",
+                    )}
+                  >
+                    GMD {formatCurrency(ytdProfit)}
+                  </p>
+                  <div className="flex items-center text-sm text-green-700 dark:text-green-400">
+                    <ArrowUpRight className="mr-1 h-4 w-4" />
+                    +15% vs last year
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Profit & Loss Chart */}
+          <Card className="border-border bg-card" data-onboarding="profit-card">
+            <div className="p-6">
+              <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="font-sans text-lg font-semibold text-foreground">Profit & Loss</h2>
+                  <p className="text-sm text-muted-foreground">Monthly profit and loss trends</p>
+                </div>
+                <Button variant="outline" size="sm">
+                  <FileDown className="mr-2 h-4 w-4" />
+                  Export
+                </Button>
+              </div>
+
+              <div className="mb-4 flex flex-col gap-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSelectAllProfitProperties}
+                    className={cn(
+                      "h-9 rounded-full border-2 px-4 transition-colors",
+                      selectedProfitProperties.size === 0 || selectedProfitProperties.size === propertyGroups.size
+                        ? "border-blue-600 bg-blue-50 text-blue-600 hover:bg-blue-100"
+                        : "border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-gray-50",
+                    )}
+                  >
+                    All Properties
+                  </Button>
+                  {Array.from(propertyGroups.keys()).map((propertyName) => (
                     <Button
+                      key={propertyName}
                       variant="outline"
                       size="sm"
-                      onClick={handleSelectAllProfitProperties}
+                      onClick={() => handleProfitPropertyToggle(propertyName)}
                       className={cn(
                         "h-9 rounded-full border-2 px-4 transition-colors",
-                        selectedProfitProperties.size === 0 || selectedProfitProperties.size === propertyGroups.size
+                        selectedProfitProperties.has(propertyName)
                           ? "border-blue-600 bg-blue-50 text-blue-600 hover:bg-blue-100"
                           : "border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-gray-50",
                       )}
                     >
-                      All Properties
+                      {propertyName}
                     </Button>
-                    {Array.from(propertyGroups.keys()).map((propertyName) => (
+                  ))}
+                </div>
+
+                {profitUnitsForSelectedProperties.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Units:</span>
+                    {profitUnitsForSelectedProperties.map((unit) => (
                       <Button
-                        key={propertyName}
+                        key={unit.id}
                         variant="outline"
                         size="sm"
-                        onClick={() => handleProfitPropertyToggle(propertyName)}
+                        onClick={() => handleProfitUnitToggle(unit.id)}
                         className={cn(
                           "h-9 rounded-full border-2 px-4 transition-colors",
-                          selectedProfitProperties.has(propertyName)
+                          selectedProfitUnits.has(unit.id)
                             ? "border-blue-600 bg-blue-50 text-blue-600 hover:bg-blue-100"
                             : "border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-gray-50",
                         )}
                       >
-                        {propertyName}
+                        {unit.unit_name}
+                        {selectedProfitUnits.has(unit.id) && <X className="ml-1 h-3 w-3" />}
                       </Button>
                     ))}
                   </div>
+                )}
+              </div>
 
-                  {profitUnitsForSelectedProperties.length > 0 && (
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm text-muted-foreground">Units:</span>
-                      {profitUnitsForSelectedProperties.map((unit) => (
-                        <Button
-                          key={unit.id}
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleProfitUnitToggle(unit.id)}
-                          className={cn(
-                            "h-9 rounded-full border-2 px-4 transition-colors",
-                            selectedProfitUnits.has(unit.id)
-                              ? "border-blue-600 bg-blue-50 text-blue-600 hover:bg-blue-100"
-                              : "border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-gray-50",
-                          )}
-                        >
-                          {unit.unit_name}
-                          {selectedProfitUnits.has(unit.id) && <X className="ml-1 h-3 w-3" />}
-                        </Button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={filteredProfitLossData}>
-                    <XAxis
-                      dataKey="month"
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={12}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <YAxis
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={12}
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(value) => `GMD ${(value / 1000).toFixed(0)}k`}
-                    />
-                    <Tooltip
-                      content={({ active, payload }) => {
-                        if (active && payload && payload.length) {
-                          return (
-                            <div className="rounded-lg border bg-background p-2 shadow-sm">
-                              <div className="grid gap-2">
-                                <div className="flex flex-col">
-                                  <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                    {payload[0].payload.month}
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={filteredProfitLossData}>
+                  <XAxis
+                    dataKey="month"
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(value) => `GMD ${(value / 1000).toFixed(0)}k`}
+                  />
+                  <Tooltip
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        return (
+                          <div className="rounded-lg border bg-background p-2 shadow-sm">
+                            <div className="grid gap-2">
+                              <div className="flex flex-col">
+                                <span className="text-[0.70rem] uppercase text-muted-foreground">
+                                  {payload[0].payload.month}
+                                </span>
+                                {payload.map((entry: any, index: number) => (
+                                  <span key={index} className="font-bold" style={{ color: entry.color }}>
+                                    {entry.name}: GMD {entry.value.toLocaleString()}
                                   </span>
-                                  {payload.map((entry: any, index: number) => (
-                                    <span key={index} className="font-bold" style={{ color: entry.color }}>
-                                      {entry.name}: GMD {entry.value.toLocaleString()}
-                                    </span>
-                                  ))}
-                                </div>
+                                ))}
                               </div>
                             </div>
-                          )
-                        }
-                        return null
-                      }}
-                    />
-                    <Legend />
-                    <Bar dataKey="realizedProfit" fill="#10B981" radius={[4, 4, 0, 0]} name="Realized" />
-                    <Bar
-                      dataKey="projectedProfit"
-                      fill="#10B981"
-                      fillOpacity={0.4}
-                      radius={[4, 4, 0, 0]}
-                      name="Projected"
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </Card>
+                          </div>
+                        )
+                      }
+                      return null
+                    }}
+                  />
+                  <Legend />
+                  <Bar dataKey="realizedProfit" fill="#10B981" radius={[4, 4, 0, 0]} name="Realized" />
+                  <Bar
+                    dataKey="projectedProfit"
+                    fill="#10B981"
+                    fillOpacity={0.4}
+                    radius={[4, 4, 0, 0]}
+                    name="Projected"
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
 
-            {/* Property Profit Ranking Card */}
-            <Card className="border-border bg-card">
-              <div className="p-6">
-                <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <h2 className="font-sans text-lg font-semibold text-foreground">Rankings</h2>
-                    <p className="text-sm text-muted-foreground">Ranked by net profit (revenue - expenses)</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Rank by:</span>
-                    <div className="flex gap-1">
-                      <Button
-                        variant={rankingMetric === "profit" ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setRankingMetric("profit")}
-                        className={rankingMetric === "profit" ? "bg-[#3B82F6] hover:bg-[#2563EB]" : ""}
-                      >
-                        Profit
-                      </Button>
-                      <Button
-                        variant={rankingMetric === "revenue" ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setRankingMetric("revenue")}
-                        className={rankingMetric === "revenue" ? "bg-[#3B82F6] hover:bg-[#2563EB]" : ""}
-                      >
-                        Revenue
-                      </Button>
-                      <Button
-                        variant={rankingMetric === "expense" ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setRankingMetric("expense")}
-                        className={rankingMetric === "expense" ? "bg-[#3B82F6] hover:bg-[#2563EB]" : ""}
-                      >
-                        Expense
-                      </Button>
-                      <Button
-                        variant={rankingMetric === "occupancy" ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setRankingMetric("occupancy")}
-                        className={rankingMetric === "occupancy" ? "bg-[#3B82F6] hover:bg-[#2563EB]" : ""}
-                      >
-                        Occupancy
-                      </Button>
-                    </div>
-                    <Button variant="outline" size="sm">
-                      <FileDown className="mr-2 h-4 w-4" />
-                      Export
+          {/* Property Profit Ranking Card */}
+          <Card className="border-border bg-card">
+            <div className="p-6">
+              <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="font-sans text-lg font-semibold text-foreground">Rankings</h2>
+                  <p className="text-sm text-muted-foreground">Ranked by net profit (revenue - expenses)</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Rank by:</span>
+                  <div className="flex gap-1">
+                    <Button
+                      variant={rankingMetric === "profit" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setRankingMetric("profit")}
+                      className={rankingMetric === "profit" ? "bg-[#3B82F6] hover:bg-[#2563EB]" : ""}
+                    >
+                      Profit
                     </Button>
-                  </div>
-                </div>
-
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-muted-foreground">Rank</TableHead>
-                        <TableHead className="text-muted-foreground">Property</TableHead>
-                        <TableHead className="text-muted-foreground">Unit</TableHead>
-                        <TableHead className="text-right text-muted-foreground">Revenue</TableHead>
-                        <TableHead className="text-right text-muted-foreground">Expenses</TableHead>
-                        <TableHead className="text-right text-muted-foreground">Net Profit</TableHead>
-                        <TableHead className="text-right text-muted-foreground">
-                          {rankingMetric === "occupancy" ? "Occupancy" : "Profit Margin"}
-                        </TableHead>
-                        <TableHead className="text-center text-muted-foreground">Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredRankingsData.map((property, index) => (
-                        <TableRow key={property.propertyId}>
-                          <TableCell className="font-medium text-foreground">#{index + 1}</TableCell>
-                          <TableCell className="font-medium text-foreground">
-                            {property.buildingName || property.unitName || property.propertyName}
-                          </TableCell>
-                          <TableCell className="text-foreground">{property.unitName || "—"}</TableCell>
-                          <TableCell className="text-right text-foreground">
-                            GMD {formatCurrency(property.revenue)}
-                          </TableCell>
-                          <TableCell className="text-right text-red-600 dark:text-red-400">
-                            GMD {formatCurrency(property.expenses)}
-                          </TableCell>
-                          <TableCell
-                            className={cn(
-                              "text-right font-semibold",
-                              property.profit >= 0
-                                ? "text-green-600 dark:text-green-400"
-                                : "text-red-600 dark:text-red-400",
-                            )}
-                          >
-                            GMD {formatCurrency(property.profit)}
-                          </TableCell>
-                          <TableCell className="text-right text-foreground">
-                            {rankingMetric === "occupancy"
-                              ? `${property.occupancy}%`
-                              : `${property.profitMargin.toFixed(1)}%`}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Badge
-                              variant="secondary"
-                              className={cn(
-                                rankingMetric === "occupancy"
-                                  ? property.occupancy >= 85
-                                    ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
-                                    : property.occupancy >= 75
-                                      ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
-                                      : property.occupancy >= 65
-                                        ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300"
-                                        : "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
-                                  : property.profitMargin >= 90
-                                    ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
-                                    : property.profitMargin >= 80
-                                      ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
-                                      : property.profitMargin >= 70
-                                        ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300"
-                                        : "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
-                              )}
-                            >
-                              {rankingMetric === "occupancy"
-                                ? property.occupancy >= 85
-                                  ? "Excellent"
-                                  : property.occupancy >= 75
-                                    ? "Good"
-                                    : property.occupancy >= 65
-                                      ? "Fair"
-                                      : "Poor"
-                                : property.profitMargin >= 90
-                                  ? "Excellent"
-                                  : property.profitMargin >= 80
-                                    ? "Good"
-                                    : property.profitMargin >= 70
-                                      ? "Fair"
-                                      : "Poor"}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
-            </Card>
-
-            {/* Occupancy Rate Card */}
-            <Card className="border-border bg-card">
-              <div className="p-6">
-                <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <h2 className="font-sans text-lg font-semibold text-foreground">Occupancy Rate</h2>
-                    <p className="text-sm text-muted-foreground">Track occupancy trends across your portfolio</p>
+                    <Button
+                      variant={rankingMetric === "revenue" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setRankingMetric("revenue")}
+                      className={rankingMetric === "revenue" ? "bg-[#3B82F6] hover:bg-[#2563EB]" : ""}
+                    >
+                      Revenue
+                    </Button>
+                    <Button
+                      variant={rankingMetric === "expense" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setRankingMetric("expense")}
+                      className={rankingMetric === "expense" ? "bg-[#3B82F6] hover:bg-[#2563EB]" : ""}
+                    >
+                      Expense
+                    </Button>
+                    <Button
+                      variant={rankingMetric === "occupancy" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setRankingMetric("occupancy")}
+                      className={rankingMetric === "occupancy" ? "bg-[#3B82F6] hover:bg-[#2563EB]" : ""}
+                    >
+                      Occupancy
+                    </Button>
                   </div>
                   <Button variant="outline" size="sm">
                     <FileDown className="mr-2 h-4 w-4" />
                     Export
                   </Button>
                 </div>
-
-                <div className="mb-4 flex flex-wrap items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm font-medium text-muted-foreground">From:</label>
-                    <input
-                      type="date"
-                      value={occupancyDateRange.start.toISOString().split("T")[0]}
-                      onChange={(e) => {
-                        const newStart = new Date(e.target.value)
-                        setOccupancyDateRange((prev) => ({ ...prev, start: newStart }))
-                      }}
-                      className="rounded-md border border-border bg-background px-3 py-1.5 text-sm"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm font-medium text-muted-foreground">To:</label>
-                    <input
-                      type="date"
-                      value={occupancyDateRange.end.toISOString().split("T")[0]}
-                      onChange={(e) => {
-                        const newEnd = new Date(e.target.value)
-                        setOccupancyDateRange((prev) => ({ ...prev, end: newEnd }))
-                      }}
-                      className="rounded-md border border-border bg-background px-3 py-1.5 text-sm"
-                    />
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const currentYear = new Date().getFullYear()
-                      setOccupancyDateRange({
-                        start: new Date(currentYear, 0, 1),
-                        end: new Date(currentYear, 11, 31),
-                      })
-                    }}
-                  >
-                    Reset to Current Year
-                  </Button>
-                </div>
-
-                <div className="mb-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm text-muted-foreground">Filter by property:</p>
-                  </div>
-
-                  {/* Level 1: Buildings + All Properties */}
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      onClick={handleSelectAllOccupancyProperties}
-                      className={cn(
-                        "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-                        selectedOccupancyProperties.size === 0 && selectedOccupancyUnits.size === 0
-                          ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
-                          : "border-gray-300 bg-white text-gray-600 hover:border-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400",
-                      )}
-                    >
-                      All Properties
-                    </button>
-
-                    {Array.from(occupancyBuildingGroups.entries()).map(([buildingName, units]) => {
-                      const allUnitsSelected = units.every((unit: any) => selectedOccupancyUnits.has(unit.id))
-                      const someUnitsSelected = units.some((unit: any) => selectedOccupancyUnits.has(unit.id))
-
-                      return (
-                        <button
-                          key={buildingName}
-                          onClick={() => toggleOccupancyBuilding(buildingName)}
-                          className={cn(
-                            "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-                            allUnitsSelected
-                              ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
-                              : someUnitsSelected
-                                ? "border-blue-300 bg-blue-25 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400"
-                                : "border-gray-300 bg-white text-gray-600 hover:border-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400",
-                          )}
-                        >
-                          {buildingName} ({units.length})
-                        </button>
-                      )
-                    })}
-                  </div>
-
-                  {/* Level 2: Units (shown when a building is selected) */}
-                  {selectedOccupancyBuilding && occupancyBuildingGroups.get(selectedOccupancyBuilding) && (
-                    <div className="flex flex-wrap items-center gap-2 border-l-2 border-blue-500 pl-4">
-                      <span className="text-xs font-medium text-muted-foreground">Units:</span>
-                      {occupancyBuildingGroups.get(selectedOccupancyBuilding)?.map((unit: any) => (
-                        <button
-                          key={unit.id}
-                          onClick={() => toggleOccupancyUnit(unit.id)}
-                          className={cn(
-                            "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-                            selectedOccupancyUnits.has(unit.id)
-                              ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
-                              : "border-gray-300 bg-white text-gray-600 hover:border-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400",
-                          )}
-                        >
-                          {unit.unit_name}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <ResponsiveContainer width="100%" height={350}>
-                  <LineChart data={occupancyTimelineData}>
-                    <XAxis
-                      dataKey="month"
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={12}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <YAxis
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={12}
-                      tickLine={false}
-                      axisLine={false}
-                      domain={[0, 100]}
-                      tickFormatter={(value) => `${value}%`}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "8px",
-                      }}
-                      formatter={(value: number) => [`${value}%`, ""]}
-                    />
-                    <Legend />
-                    {(() => {
-                      if (selectedOccupancyBuilding && selectedOccupancyBuilding !== "all") {
-                        const buildingUnits = occupancyBuildingGroups.get(selectedOccupancyBuilding) || []
-                        const allUnitsSelected = buildingUnits.every((unit: any) => selectedOccupancyUnits.has(unit.id))
-
-                        if (allUnitsSelected) {
-                          return (
-                            <Line
-                              key={selectedOccupancyBuilding}
-                              type="monotone"
-                              dataKey={selectedOccupancyBuilding}
-                              stroke={propertyColors[0]}
-                              strokeWidth={2}
-                              strokeOpacity={1}
-                              dot={(props: any) => {
-                                const { cx, cy, payload } = props
-                                return (
-                                  <circle
-                                    cx={cx}
-                                    cy={cy}
-                                    r={4}
-                                    fill={propertyColors[0]}
-                                    opacity={payload?.isFuture ? 0.4 : 1}
-                                    stroke={propertyColors[0]}
-                                    strokeWidth={payload?.isFuture ? 1 : 0}
-                                    strokeDasharray={payload?.isFuture ? "2,2" : "0"}
-                                  />
-                                )
-                              }}
-                              strokeDasharray={undefined}
-                            />
-                          )
-                        } else {
-                          // Show individual unit lines for the selected building
-                          return Array.from(selectedOccupancyUnits)
-                            .filter((unitId) => buildingUnits.some((unit: any) => unit.id === unitId))
-                            .map((unitId, index) => {
-                              const unit = properties.find((p) => p.id === unitId)
-                              if (!unit) return null
-                              return (
-                                <Line
-                                  key={unitId}
-                                  type="monotone"
-                                  dataKey={unit.unit_name}
-                                  stroke={propertyColors[index % propertyColors.length]}
-                                  strokeWidth={2}
-                                  strokeOpacity={1}
-                                  dot={(props: any) => {
-                                    const { cx, cy, payload } = props
-                                    return (
-                                      <circle
-                                        cx={cx}
-                                        cy={cy}
-                                        r={4}
-                                        fill={propertyColors[index % propertyColors.length]}
-                                        opacity={payload?.isFuture ? 0.4 : 1}
-                                        stroke={propertyColors[index % propertyColors.length]}
-                                        strokeWidth={payload?.isFuture ? 1 : 0}
-                                        strokeDasharray={payload?.isFuture ? "2,2" : "0"}
-                                      />
-                                    )
-                                  }}
-                                  strokeDasharray={undefined}
-                                />
-                              )
-                            })
-                        }
-                      } else if (selectedOccupancyUnits.size > 0) {
-                        // Show individual unit lines for selected units across different buildings
-                        return Array.from(selectedOccupancyUnits).map((unitId, index) => {
-                          const unit = properties.find((p) => p.id === unitId)
-                          if (!unit) return null
-                          return (
-                            <Line
-                              key={unitId}
-                              type="monotone"
-                              dataKey={unit.unit_name}
-                              stroke={propertyColors[index % propertyColors.length]}
-                              strokeWidth={2}
-                              strokeOpacity={1}
-                              dot={(props: any) => {
-                                const { cx, cy, payload } = props
-                                return (
-                                  <circle
-                                    cx={cx}
-                                    cy={cy}
-                                    r={4}
-                                    fill={propertyColors[index % propertyColors.length]}
-                                    opacity={payload?.isFuture ? 0.4 : 1}
-                                    stroke={propertyColors[index % propertyColors.length]}
-                                    strokeWidth={payload?.isFuture ? 1 : 0}
-                                    strokeDasharray={payload?.isFuture ? "2,2" : "0"}
-                                  />
-                                )
-                              }}
-                              strokeDasharray={undefined}
-                            />
-                          )
-                        })
-                      } else {
-                        // Default: Show all properties if no specific building or units are selected
-                        // Note: This part might need adjustment based on how "All Properties" is handled
-                        // If "All Properties" means showing individual lines for all units, the logic below handles it
-                        const allUnits = properties.map((p) => p.id)
-                        return allUnits.map((unitId, index) => {
-                          const unit = properties.find((p) => p.id === unitId)
-                          if (!unit) return null
-                          return (
-                            <Line
-                              key={unitId}
-                              type="monotone"
-                              dataKey={unit.unit_name}
-                              stroke={propertyColors[index % propertyColors.length]}
-                              strokeWidth={2}
-                              strokeOpacity={1}
-                              dot={(props: any) => {
-                                const { cx, cy, payload } = props
-                                return (
-                                  <circle
-                                    cx={cx}
-                                    cy={cy}
-                                    r={4}
-                                    fill={propertyColors[index % propertyColors.length]}
-                                    opacity={payload?.isFuture ? 0.4 : 1}
-                                    stroke={propertyColors[index % propertyColors.length]}
-                                    strokeWidth={payload?.isFuture ? 1 : 0}
-                                    strokeDasharray={payload?.isFuture ? "2,2" : "0"}
-                                  />
-                                )
-                              }}
-                              strokeDasharray={undefined}
-                            />
-                          )
-                        })
-                      }
-                    })()}
-                  </LineChart>
-                </ResponsiveContainer>
               </div>
-            </Card>
 
-            {/* Transaction History table */}
-            <Card className="border-border bg-card">
-              <div className="p-6">
-                <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <h2 className="font-sans text-lg font-semibold text-foreground">Transaction History</h2>
-                    <p className="text-sm text-muted-foreground">Recent financial transactions across your portfolio</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm">
-                      <FileDown className="mr-2 h-4 w-4" />
-                      Export
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="mb-4 flex flex-col gap-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm text-muted-foreground">Filter by property:</p>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleSelectAllTransactionProperties}
-                      className="h-7 text-xs text-blue-600 hover:text-blue-700"
-                    >
-                      Select All
-                    </Button>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {properties.map((property) => (
-                      <button
-                        key={property.id}
-                        onClick={() => handleTransactionPropertyToggle(property.id)}
-                        className={cn(
-                          "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-                          selectedTransactionProperties.has(property.id)
-                            ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
-                            : "border-gray-300 bg-white text-gray-600 hover:border-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400",
-                        )}
-                      >
-                        {property.name}
-                      </button>
-                    ))}
-                  </div>
-
-                  {transactionUnitsForSelectedProperties.length > 0 && (
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm text-muted-foreground">Units:</span>
-                      {transactionUnitsForSelectedProperties.map((unit) => (
-                        <Button
-                          key={unit.id}
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleTransactionUnitToggle(unit.id)}
-                          className={cn(
-                            "h-9 rounded-full border-2 px-4 transition-colors",
-                            selectedTransactionUnits.has(unit.id)
-                              ? "border-blue-600 bg-blue-50 text-blue-600 hover:bg-blue-100"
-                              : "border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-gray-50",
-                          )}
-                        >
-                          {unit.unit_name}
-                          {selectedTransactionUnits.has(unit.id) && <X className="ml-1 h-3 w-3" />}
-                        </Button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Filters */}
-                <div className="mb-4 grid gap-3 sm:grid-cols-3">
-                  <Input
-                    type="text"
-                    placeholder="Search transactions..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                  <Select value={typeFilter} onValueChange={setTypeFilter}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All Types" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Types</SelectItem>
-                      <SelectItem value="payment">Payments</SelectItem>
-                      <SelectItem value="expense">Expenses</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Select value={selectedProperty} onValueChange={setSelectedProperty}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All Properties" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Properties</SelectItem>
-                      {properties.map((property) => (
-                        <SelectItem key={property.id} value={String(property.id)}>
-                          {property.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
+              <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-muted-foreground">Date</TableHead>
-                      <TableHead className="text-muted-foreground">Description</TableHead>
-                      <TableHead className="text-muted-foreground">Type</TableHead>
+                      <TableHead className="text-muted-foreground">Rank</TableHead>
                       <TableHead className="text-muted-foreground">Property</TableHead>
-                      <TableHead className="text-right text-muted-foreground">Amount</TableHead>
+                      <TableHead className="text-muted-foreground">Unit</TableHead>
+                      <TableHead className="text-right text-muted-foreground">Revenue</TableHead>
+                      <TableHead className="text-right text-muted-foreground">Expenses</TableHead>
+                      <TableHead className="text-right text-muted-foreground">Net Profit</TableHead>
+                      <TableHead className="text-right text-muted-foreground">
+                        {rankingMetric === "occupancy" ? "Occupancy" : "Profit Margin"}
+                      </TableHead>
                       <TableHead className="text-center text-muted-foreground">Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredTransactionHistory.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center text-muted-foreground">
-                          No transactions found
+                    {filteredRankingsData.map((property, index) => (
+                      <TableRow key={property.propertyId}>
+                        <TableCell className="font-medium text-foreground">#{index + 1}</TableCell>
+                        <TableCell className="font-medium text-foreground">
+                          {property.buildingName || property.unitName || property.propertyName}
                         </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredTransactionHistory.map((transaction) => (
-                        <TableRow key={transaction.id}>
-                          <TableCell className="text-foreground">
-                            {new Date(transaction.date).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell className="font-medium text-foreground">{transaction.description}</TableCell>
-                          <TableCell>
-                            <Badge
-                              variant="secondary"
-                              className={
-                                transaction.type === "payment"
-                                  ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
-                                  : "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
-                              }
-                            >
-                              {transaction.type.charAt(0).toUpperCase() + transaction.type.slice(1)}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-foreground">{getPropertyName(transaction.property)}</TableCell>
-                          <TableCell
+                        <TableCell className="text-foreground">{property.unitName || "—"}</TableCell>
+                        <TableCell className="text-right text-foreground">
+                          GMD {formatCurrency(property.revenue)}
+                        </TableCell>
+                        <TableCell className="text-right text-red-600 dark:text-red-400">
+                          GMD {formatCurrency(property.expenses)}
+                        </TableCell>
+                        <TableCell
+                          className={cn(
+                            "text-right font-semibold",
+                            property.profit >= 0
+                              ? "text-green-600 dark:text-green-400"
+                              : "text-red-600 dark:text-red-400",
+                          )}
+                        >
+                          GMD {formatCurrency(property.profit)}
+                        </TableCell>
+                        <TableCell className="text-right text-foreground">
+                          {rankingMetric === "occupancy"
+                            ? `${property.occupancy}%`
+                            : `${property.profitMargin.toFixed(1)}%`}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge
+                            variant="secondary"
                             className={cn(
-                              "text-right font-semibold",
-                              transaction.type === "payment"
-                                ? "text-green-600 dark:text-green-400"
-                                : "text-red-600 dark:text-red-400",
+                              rankingMetric === "occupancy"
+                                ? property.occupancy >= 85
+                                  ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+                                  : property.occupancy >= 75
+                                    ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+                                    : property.occupancy >= 65
+                                      ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300"
+                                      : "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
+                                : property.profitMargin >= 90
+                                  ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+                                  : property.profitMargin >= 80
+                                    ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+                                    : property.profitMargin >= 70
+                                      ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300"
+                                      : "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
                             )}
                           >
-                            {transaction.type === "payment" ? "+" : "-"}GMD{" "}
-                            {formatCurrency(Math.abs(transaction.amount))}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Badge
-                              variant={transaction.status === "completed" ? "default" : "secondary"}
-                              className={
-                                transaction.status === "completed"
-                                  ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
-                                  : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300"
-                              }
-                            >
-                              {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
+                            {rankingMetric === "occupancy"
+                              ? property.occupancy >= 85
+                                ? "Excellent"
+                                : property.occupancy >= 75
+                                  ? "Good"
+                                  : property.occupancy >= 65
+                                    ? "Fair"
+                                    : "Poor"
+                              : property.profitMargin >= 90
+                                ? "Excellent"
+                                : property.profitMargin >= 80
+                                  ? "Good"
+                                  : property.profitMargin >= 70
+                                    ? "Fair"
+                                    : "Poor"}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
                   </TableBody>
                 </Table>
               </div>
-            </Card>
-          </TabsContent>
-
-          {/* Revenue Tab Content */}
-          <TabsContent value="revenue" className="space-y-6">
-            {/* Revenue Metrics Cards */}
-            <div className="grid gap-4 md:grid-cols-4">
-              <Card className="border-border bg-card">
-                <CardContent className="p-6">
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">Total Revenue</p>
-                    <p className="font-sans text-2xl font-bold text-foreground">GMD {formatCurrency(totalRevenue)}</p>
-                    <div className="flex items-center text-sm text-green-600 dark:text-green-400">
-                      <ArrowUpRight className="mr-1 h-4 w-4" />
-                      +12% vs last year
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-border bg-card">
-                <CardContent className="p-6">
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">Avg Occupancy</p>
-                    <p className="font-sans text-2xl font-bold text-foreground">{avgOccupancy.toFixed(1)}%</p>
-                    <div className="flex items-center text-sm text-green-600 dark:text-green-400">
-                      <ArrowUpRight className="mr-1 h-4 w-4" />
-                      +5% vs last year
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-border bg-card">
-                <CardContent className="p-6">
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">Avg ADR</p>
-                    <p className="font-sans text-2xl font-bold text-foreground">GMD {avgADR.toFixed(0)}</p>
-                    <div className="flex items-center text-sm text-green-600 dark:text-green-400">
-                      <ArrowUpRight className="mr-1 h-4 w-4" />
-                      +8% vs last year
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-border bg-card">
-                <CardContent className="p-6">
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">Avg RevPAR</p>
-                    <p className="font-sans text-2xl font-bold text-foreground">GMD {avgRevPAR.toFixed(0)}</p>
-                    <div className="flex items-center text-sm text-green-600 dark:text-green-400">
-                      <ArrowUpRight className="mr-1 h-4 w-4" />
-                      +10% vs last year
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
             </div>
+          </Card>
 
-            {/* Revenue Timeline Chart */}
-            <Card className="border-border bg-card">
-              <div className="p-6">
-                <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <h2 className="font-sans text-lg font-semibold text-foreground">Revenue</h2>
-                    <p className="text-sm text-muted-foreground">Track revenue trends across your portfolio</p>
+          {/* Occupancy Rate Card */}
+          <Card className="border-border bg-card">
+            <div className="p-6">
+              <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="font-sans text-lg font-semibold text-foreground">Occupancy Rate</h2>
+                  <p className="text-sm text-muted-foreground">Track occupancy trends across your portfolio</p>
+                </div>
+                <Button variant="outline" size="sm">
+                  <FileDown className="mr-2 h-4 w-4" />
+                  Export
+                </Button>
+              </div>
+
+              <div className="mb-4 flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-muted-foreground">From:</label>
+                  <input
+                    type="date"
+                    value={occupancyDateRange.start.toISOString().split("T")[0]}
+                    onChange={(e) => {
+                      const newStart = new Date(e.target.value)
+                      setOccupancyDateRange((prev) => ({ ...prev, start: newStart }))
+                    }}
+                    className="rounded-md border border-border bg-background px-3 py-1.5 text-sm"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-muted-foreground">To:</label>
+                  <input
+                    type="date"
+                    value={occupancyDateRange.end.toISOString().split("T")[0]}
+                    onChange={(e) => {
+                      const newEnd = new Date(e.target.value)
+                      setOccupancyDateRange((prev) => ({ ...prev, end: newEnd }))
+                    }}
+                    className="rounded-md border border-border bg-background px-3 py-1.5 text-sm"
+                  />
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const currentYear = new Date().getFullYear()
+                    setOccupancyDateRange({
+                      start: new Date(currentYear, 0, 1),
+                      end: new Date(currentYear, 11, 31),
+                    })
+                  }}
+                >
+                  Reset to Current Year
+                </Button>
+              </div>
+
+              <div className="mb-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-muted-foreground">Filter by property:</p>
+                </div>
+
+                {/* Level 1: Buildings + All Properties */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={handleSelectAllOccupancyProperties}
+                    className={cn(
+                      "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                      selectedOccupancyProperties.size === 0 && selectedOccupancyUnits.size === 0
+                        ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
+                        : "border-gray-300 bg-white text-gray-600 hover:border-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400",
+                    )}
+                  >
+                    All Properties
+                  </button>
+
+                  {Array.from(occupancyBuildingGroups.entries()).map(([buildingName, units]) => {
+                    const allUnitsSelected = units.every((unit: any) => selectedOccupancyUnits.has(unit.id))
+                    const someUnitsSelected = units.some((unit: any) => selectedOccupancyUnits.has(unit.id))
+
+                    return (
+                      <button
+                        key={buildingName}
+                        onClick={() => toggleOccupancyBuilding(buildingName)}
+                        className={cn(
+                          "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                          allUnitsSelected
+                            ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
+                            : someUnitsSelected
+                              ? "border-blue-300 bg-blue-25 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400"
+                              : "border-gray-300 bg-white text-gray-600 hover:border-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400",
+                        )}
+                      >
+                        {buildingName} ({units.length})
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {/* Level 2: Units (shown when a building is selected) */}
+                {selectedOccupancyBuilding && occupancyBuildingGroups.get(selectedOccupancyBuilding) && (
+                  <div className="flex flex-wrap items-center gap-2 border-l-2 border-blue-500 pl-4">
+                    <span className="text-xs font-medium text-muted-foreground">Units:</span>
+                    {occupancyBuildingGroups.get(selectedOccupancyBuilding)?.map((unit: any) => (
+                      <button
+                        key={unit.id}
+                        onClick={() => toggleOccupancyUnit(unit.id)}
+                        className={cn(
+                          "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                          selectedOccupancyUnits.has(unit.id)
+                            ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
+                            : "border-gray-300 bg-white text-gray-600 hover:border-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400",
+                        )}
+                      >
+                        {unit.unit_name}
+                      </button>
+                    ))}
                   </div>
+                )}
+              </div>
+
+              <ResponsiveContainer width="100%" height={350}>
+                <LineChart data={occupancyTimelineData}>
+                  <XAxis
+                    dataKey="month"
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                    domain={[0, 100]}
+                    tickFormatter={(value) => `${value}%`}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "hsl(var(--card))",
+                      border: "1px solid hsl(var(--border))",
+                      borderRadius: "8px",
+                    }}
+                    formatter={(value: number) => [`${value}%`, ""]}
+                  />
+                  <Legend />
+                  {(() => {
+                    if (selectedOccupancyBuilding && selectedOccupancyBuilding !== "all") {
+                      const buildingUnits = occupancyBuildingGroups.get(selectedOccupancyBuilding) || []
+                      const allUnitsSelected = buildingUnits.every((unit: any) => selectedOccupancyUnits.has(unit.id))
+
+                      if (allUnitsSelected) {
+                        return (
+                          <Line
+                            key={selectedOccupancyBuilding}
+                            type="monotone"
+                            dataKey={selectedOccupancyBuilding}
+                            stroke={propertyColors[0]}
+                            strokeWidth={2}
+                            strokeOpacity={1}
+                            dot={(props: any) => {
+                              const { cx, cy, payload } = props
+                              return (
+                                <circle
+                                  cx={cx}
+                                  cy={cy}
+                                  r={4}
+                                  fill={propertyColors[0]}
+                                  opacity={payload?.isFuture ? 0.4 : 1}
+                                  stroke={propertyColors[0]}
+                                  strokeWidth={payload?.isFuture ? 1 : 0}
+                                  strokeDasharray={payload?.isFuture ? "2,2" : "0"}
+                                />
+                              )
+                            }}
+                            strokeDasharray={undefined}
+                          />
+                        )
+                      } else {
+                        // Show individual unit lines for the selected building
+                        return Array.from(selectedOccupancyUnits)
+                          .filter((unitId) => buildingUnits.some((unit: any) => unit.id === unitId))
+                          .map((unitId, index) => {
+                            const unit = properties.find((p) => p.id === unitId)
+                            if (!unit) return null
+                            return (
+                              <Line
+                                key={unitId}
+                                type="monotone"
+                                dataKey={unit.unit_name}
+                                stroke={propertyColors[index % propertyColors.length]}
+                                strokeWidth={2}
+                                strokeOpacity={1}
+                                dot={(props: any) => {
+                                  const { cx, cy, payload } = props
+                                  return (
+                                    <circle
+                                      cx={cx}
+                                      cy={cy}
+                                      r={4}
+                                      fill={propertyColors[index % propertyColors.length]}
+                                      opacity={payload?.isFuture ? 0.4 : 1}
+                                      stroke={propertyColors[index % propertyColors.length]}
+                                      strokeWidth={payload?.isFuture ? 1 : 0}
+                                      strokeDasharray={payload?.isFuture ? "2,2" : "0"}
+                                    />
+                                  )
+                                }}
+                                strokeDasharray={undefined}
+                              />
+                            )
+                          })
+                      }
+                    } else if (selectedOccupancyUnits.size > 0) {
+                      // Show individual unit lines for selected units across different buildings
+                      return Array.from(selectedOccupancyUnits).map((unitId, index) => {
+                        const unit = properties.find((p) => p.id === unitId)
+                        if (!unit) return null
+                        return (
+                          <Line
+                            key={unitId}
+                            type="monotone"
+                            dataKey={unit.unit_name}
+                            stroke={propertyColors[index % propertyColors.length]}
+                            strokeWidth={2}
+                            strokeOpacity={1}
+                            dot={(props: any) => {
+                              const { cx, cy, payload } = props
+                              return (
+                                <circle
+                                  cx={cx}
+                                  cy={cy}
+                                  r={4}
+                                  fill={propertyColors[index % propertyColors.length]}
+                                  opacity={payload?.isFuture ? 0.4 : 1}
+                                  stroke={propertyColors[index % propertyColors.length]}
+                                  strokeWidth={payload?.isFuture ? 1 : 0}
+                                  strokeDasharray={payload?.isFuture ? "2,2" : "0"}
+                                />
+                              )
+                            }}
+                            strokeDasharray={undefined}
+                          />
+                        )
+                      })
+                    } else {
+                      // Default: Show all properties if no specific building or units are selected
+                      // Note: This part might need adjustment based on how "All Properties" is handled
+                      // If "All Properties" means showing individual lines for all units, the logic below handles it
+                      const allUnits = properties.map((p) => p.id)
+                      return allUnits.map((unitId, index) => {
+                        const unit = properties.find((p) => p.id === unitId)
+                        if (!unit) return null
+                        return (
+                          <Line
+                            key={unitId}
+                            type="monotone"
+                            dataKey={unit.unit_name}
+                            stroke={propertyColors[index % propertyColors.length]}
+                            strokeWidth={2}
+                            strokeOpacity={1}
+                            dot={(props: any) => {
+                              const { cx, cy, payload } = props
+                              return (
+                                <circle
+                                  cx={cx}
+                                  cy={cy}
+                                  r={4}
+                                  fill={propertyColors[index % propertyColors.length]}
+                                  opacity={payload?.isFuture ? 0.4 : 1}
+                                  stroke={propertyColors[index % propertyColors.length]}
+                                  strokeWidth={payload?.isFuture ? 1 : 0}
+                                  strokeDasharray={payload?.isFuture ? "2,2" : "0"}
+                                />
+                              )
+                            }}
+                            strokeDasharray={undefined}
+                          />
+                        )
+                      })
+                    }
+                  })()}
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+
+          {/* Transaction History table */}
+          <Card className="border-border bg-card">
+            <div className="p-6">
+              <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="font-sans text-lg font-semibold text-foreground">Transaction History</h2>
+                  <p className="text-sm text-muted-foreground">Recent financial transactions across your portfolio</p>
+                </div>
+                <div className="flex items-center gap-2">
                   <Button variant="outline" size="sm">
                     <FileDown className="mr-2 h-4 w-4" />
                     Export
                   </Button>
                 </div>
+              </div>
 
-                <div className="mb-4 flex flex-wrap items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm font-medium text-muted-foreground">From:</label>
-                    <input
-                      type="date"
-                      value={revenueDateRange.start.toISOString().split("T")[0]}
-                      onChange={(e) => {
-                        const newStart = new Date(e.target.value)
-                        setRevenueDateRange((prev) => ({ ...prev, start: newStart }))
-                      }}
-                      className="rounded-md border border-border bg-background px-3 py-1.5 text-sm"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm font-medium text-muted-foreground">To:</label>
-                    <input
-                      type="date"
-                      value={revenueDateRange.end.toISOString().split("T")[0]}
-                      onChange={(e) => {
-                        const newEnd = new Date(e.target.value)
-                        setRevenueDateRange((prev) => ({ ...prev, end: newEnd }))
-                      }}
-                      className="rounded-md border border-border bg-background px-3 py-1.5 text-sm"
-                    />
-                  </div>
+              <div className="mb-4 flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-muted-foreground">Filter by property:</p>
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
-                    onClick={() => {
-                      const currentYear = new Date().getFullYear()
-                      setRevenueDateRange({
-                        start: new Date(currentYear, 0, 1),
-                        end: new Date(currentYear, 11, 31),
-                      })
-                    }}
+                    onClick={handleSelectAllTransactionProperties}
+                    className="h-7 text-xs text-blue-600 hover:text-blue-700"
                   >
-                    Reset to Current Year
+                    Select All
                   </Button>
                 </div>
-
-                <div className="mb-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm text-muted-foreground">Filter by property:</p>
-                  </div>
-
-                  {/* Level 1: Buildings + All Properties */}
-                  <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap gap-2">
+                  {properties.map((property) => (
                     <button
-                      onClick={selectAllRevenueProperties}
+                      key={property.id}
+                      onClick={() => handleTransactionPropertyToggle(property.id)}
                       className={cn(
                         "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-                        selectedRevenueUnits.size === properties.length && !selectedRevenueBuilding
+                        selectedTransactionProperties.has(property.id)
                           ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
                           : "border-gray-300 bg-white text-gray-600 hover:border-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400",
                       )}
                     >
-                      All Properties
+                      {property.name}
                     </button>
-
-                    {Array.from(revenueBuildingGroups.entries()).map(([buildingName, units]) => {
-                      const allUnitsSelected = units.every((unit: any) => selectedRevenueUnits.has(unit.id))
-                      const someUnitsSelected = units.some((unit: any) => selectedRevenueUnits.has(unit.id))
-                      const isSelected = selectedRevenueBuilding === buildingName
-
-                      return (
-                        <button
-                          key={buildingName}
-                          onClick={() => toggleRevenueBuilding(buildingName)}
-                          className={cn(
-                            "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-                            allUnitsSelected
-                              ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
-                              : someUnitsSelected
-                                ? "border-blue-300 bg-blue-25 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400"
-                                : "border-gray-300 bg-white text-gray-600 hover:border-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400",
-                          )}
-                        >
-                          {buildingName} ({units.length})
-                        </button>
-                      )
-                    })}
-                  </div>
-
-                  {/* Level 2: Units (shown when a building is selected) */}
-                  {selectedRevenueBuilding && revenueBuildingGroups.get(selectedRevenueBuilding) && (
-                    <div className="flex flex-wrap items-center gap-2 border-l-2 border-blue-500 pl-4">
-                      <span className="text-xs font-medium text-muted-foreground">Units:</span>
-                      {revenueBuildingGroups.get(selectedRevenueBuilding)?.map((unit: any) => (
-                        <button
-                          key={unit.id}
-                          onClick={() => toggleRevenueUnit(unit.id)}
-                          className={cn(
-                            "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-                            selectedRevenueUnits.has(unit.id)
-                              ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
-                              : "border-gray-300 bg-white text-gray-600 hover:border-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400",
-                          )}
-                        >
-                          {unit.unit_name}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  ))}
                 </div>
 
-                <ResponsiveContainer width="100%" height={350}>
-                  <BarChart data={actualFilteredRevenueTimelineData}>
-                    <XAxis
-                      dataKey="month"
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={12}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <YAxis
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={12}
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
-                    />
-                    <Tooltip
-                      content={({ active, payload }) => {
-                        if (active && payload && payload.length) {
-                          return (
-                            <div className="rounded-lg border bg-background p-2 shadow-sm">
-                              <div className="grid gap-2">
-                                <div className="flex flex-col">
-                                  <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                    {payload[0].payload.month}
-                                  </span>
-                                  {payload.map((entry: any, index: number) => (
-                                    <span key={index} className="font-bold" style={{ color: entry.color }}>
-                                      {entry.name}: GMD {entry.value.toLocaleString()}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-                          )
-                        }
-                        return null
-                      }}
-                    />
-                    {selectedRevenueBuilding && revenueBuildingGroups.get(selectedRevenueBuilding)
-                      ? // Building-level view
-                        (() => {
-                          const buildingUnits = revenueBuildingGroups.get(selectedRevenueBuilding) || []
-                          const allUnitsSelected = buildingUnits.every((unit: any) => selectedRevenueUnits.has(unit.id))
-
-                          if (allUnitsSelected) {
-                            // Show aggregated building bar
-                            return (
-                              <Bar
-                                key={selectedRevenueBuilding}
-                                dataKey={selectedRevenueBuilding}
-                                name={selectedRevenueBuilding}
-                                fill={propertyColors[0]}
-                                radius={[4, 4, 0, 0]}
-                              />
-                            )
-                          } else {
-                            // Show individual unit bars
-                            return buildingUnits
-                              .filter((unit: any) => selectedRevenueUnits.has(unit.id))
-                              .map((unit: any, index: number) => (
-                                <Bar
-                                  key={unit.id}
-                                  dataKey={unit.id.toString()}
-                                  name={unit.unit_name || `Unit ${unit.id}`}
-                                  fill={propertyColors[index % propertyColors.length]}
-                                  radius={[4, 4, 0, 0]}
-                                />
-                              ))
-                          }
-                        })()
-                      : // All properties view
-                        (() => {
-                          const allPropertiesSelected =
-                            selectedRevenueUnits.size === properties.length && properties.length > 0
-
-                          if (allPropertiesSelected) {
-                            // Show single aggregated bar for all properties
-                            return (
-                              <Bar
-                                key="total"
-                                dataKey="total"
-                                name="All Properties"
-                                fill={propertyColors[0]}
-                                radius={[4, 4, 0, 0]}
-                              />
-                            )
-                          } else {
-                            // Show individual property bars
-                            return properties
-                              .filter((property: any) => selectedRevenueUnits.has(property.id))
-                              .map((property: any, index: number) => (
-                                <Bar
-                                  key={property.id}
-                                  dataKey={property.id.toString()}
-                                  name={property.unit_name || property.property_name || `Property ${property.id}`}
-                                  fill={propertyColors[index % propertyColors.length]}
-                                  radius={[4, 4, 0, 0]}
-                                />
-                              ))
-                          }
-                        })()}
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </Card>
-
-            <div className="grid gap-6 md:grid-cols-2">
-              {/* Revenue Share by Property Card */}
-              <Card className="border-border bg-card">
-                <div className="p-6">
-                  <h2 className="mb-4 font-sans text-lg font-semibold text-foreground">Revenue Share by Property</h2>
-                  <p className="mb-6 text-sm text-muted-foreground">Revenue distribution across properties</p>
-
-                  {/* DATE RANGE FILTER FOR REVENUE SHARE */}
-                  <div className="mb-4 flex flex-wrap items-center gap-3">
-                    <div className="flex items-center gap-2">
-                      <label className="text-sm font-medium text-muted-foreground">From:</label>
-                      <input
-                        type="date"
-                        value={revenueShareDateRange.start.toISOString().split("T")[0]}
-                        onChange={(e) => {
-                          const newStart = new Date(e.target.value)
-                          setRevenueShareDateRange((prev) => ({ ...prev, start: newStart }))
-                        }}
-                        className="rounded-md border border-border bg-background px-3 py-1.5 text-sm"
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <label className="text-sm font-medium text-muted-foreground">To:</label>
-                      <input
-                        type="date"
-                        value={revenueShareDateRange.end.toISOString().split("T")[0]}
-                        onChange={(e) => {
-                          const newEnd = new Date(e.target.value)
-                          setRevenueShareDateRange((prev) => ({ ...prev, end: newEnd }))
-                        }}
-                        className="rounded-md border border-border bg-background px-3 py-1.5 text-sm"
-                      />
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const currentYear = new Date().getFullYear()
-                        setRevenueShareDateRange({
-                          start: new Date(currentYear, 0, 1),
-                          end: new Date(currentYear, 11, 31),
-                        })
-                      }}
-                    >
-                      Reset
-                    </Button>
-                  </div>
-
-                  <div className="flex items-center justify-center">
-                    <SVGDonutChart
-                      data={revenueShareData}
-                      size={250}
-                      innerRadius={60}
-                      outerRadius={100}
-                      formatValue={(value) => `GMD ${formatCurrency(value)}`}
-                    />
-                  </div>
-
-                  {/* Legend */}
-                  {revenueShareData.length > 0 && (
-                    <div className="space-y-2">
-                      {revenueShareData.map((item, index) => (
-                        <div key={item.name} className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div
-                              className="h-3 w-3 rounded-full"
-                              style={{ backgroundColor: REVENUE_SHARE_COLORS[index % REVENUE_SHARE_COLORS.length] }}
-                            />
-                            <span className="text-sm text-foreground">{item.name}</span>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-sm font-semibold text-foreground">GMD {formatCurrency(item.value)}</p>
-                            <p className="text-xs text-muted-foreground">{item.percentage}%</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </Card>
-
-              {/* Revenue by Rental Type Card */}
-              <Card className="border-border bg-card">
-                <div className="p-6">
-                  <h2 className="mb-4 font-sans text-lg font-semibold text-foreground">Revenue by Rental Type</h2>
-
-                  {/* Horizontal Bar Chart */}
-                  <div className="mb-6 space-y-3">
-                    {dynamicRevenueByRentalType.map((item) => (
-                      <div key={item.type}>
-                        <div className="mb-1 flex items-center justify-between">
-                          <span className="text-sm font-medium text-foreground">{item.type}</span>
-                          <div className="text-right">
-                            <p className="text-sm font-semibold text-foreground">GMD {formatCurrency(item.value)}</p>
-                            <p className="text-xs text-muted-foreground">{item.percentage}%</p>
-                          </div>
-                        </div>
-                        <div className="h-8 w-full overflow-hidden rounded-lg bg-gray-200 dark:bg-gray-700">
-                          <div
-                            className="h-full rounded-lg transition-all"
-                            style={{
-                              width: `${item.percentage}%`,
-                              backgroundColor: item.color,
-                            }}
-                          />
-                        </div>
-                      </div>
+                {transactionUnitsForSelectedProperties.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Units:</span>
+                    {transactionUnitsForSelectedProperties.map((unit) => (
+                      <Button
+                        key={unit.id}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleTransactionUnitToggle(unit.id)}
+                        className={cn(
+                          "h-9 rounded-full border-2 px-4 transition-colors",
+                          selectedTransactionUnits.has(unit.id)
+                            ? "border-blue-600 bg-blue-50 text-blue-600 hover:bg-blue-100"
+                            : "border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-gray-50",
+                        )}
+                      >
+                        {unit.unit_name}
+                        {selectedTransactionUnits.has(unit.id) && <X className="ml-1 h-3 w-3" />}
+                      </Button>
                     ))}
                   </div>
+                )}
+              </div>
 
-                  {/* Property List with Tagging System */}
-                  <div className="border-t border-border pt-4">
-                    <h3 className="mb-3 text-sm font-semibold text-foreground">Top Revenue Properties by Type</h3>
-                    <div className="space-y-4">
-                      {/* Short-term properties */}
-                      <div>
-                        <div className="mb-2 flex items-center gap-2">
-                          <div className="h-3 w-3 rounded-full bg-blue-500" />
-                          <span className="text-sm font-medium text-foreground">Short-term</span>
-                        </div>
-                        <div className="ml-5 space-y-2">
-                          {revenueByPropertyAndType["short-term"].slice(0, 3).map((property) => (
-                            <div
-                              key={property.propertyId}
-                              className="flex items-center justify-between rounded-lg border border-border bg-muted/30 p-2"
-                            >
-                              <span className="text-sm text-foreground">{property.propertyName}</span>
-                              <span className="text-sm font-semibold text-foreground">
-                                GMD {formatCurrency(property.revenue)}
-                              </span>
-                            </div>
-                          ))}
-                          {revenueByPropertyAndType["short-term"].length === 0 && (
-                            <div className="text-sm text-muted-foreground">No properties</div>
-                          )}
-                        </div>
-                      </div>
+              {/* Filters */}
+              <div className="mb-4 grid gap-3 sm:grid-cols-3">
+                <Input
+                  type="text"
+                  placeholder="Search transactions..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                <Select value={typeFilter} onValueChange={setTypeFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Types" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="payment">Payments</SelectItem>
+                    <SelectItem value="expense">Expenses</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={selectedProperty} onValueChange={setSelectedProperty}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Properties" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Properties</SelectItem>
+                    {properties.map((property) => (
+                      <SelectItem key={property.id} value={String(property.id)}>
+                        {property.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-                      {/* Long-term properties */}
-                      <div>
-                        <div className="mb-2 flex items-center gap-2">
-                          <div className="h-3 w-3 rounded-full bg-green-500" />
-                          <span className="text-sm font-medium text-foreground">Long-term</span>
-                        </div>
-                        <div className="ml-5 space-y-2">
-                          {revenueByPropertyAndType["long-term"].slice(0, 3).map((property) => (
-                            <div
-                              key={property.propertyId}
-                              className="flex items-center justify-between rounded-lg border border-border bg-muted/30 p-2"
-                            >
-                              <span className="text-sm text-foreground">{property.propertyName}</span>
-                              <span className="text-sm font-semibold text-foreground">
-                                GMD {formatCurrency(property.revenue)}
-                              </span>
-                            </div>
-                          ))}
-                          {revenueByPropertyAndType["long-term"].length === 0 && (
-                            <div className="text-sm text-muted-foreground">No properties</div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-muted-foreground">Date</TableHead>
+                    <TableHead className="text-muted-foreground">Description</TableHead>
+                    <TableHead className="text-muted-foreground">Type</TableHead>
+                    <TableHead className="text-muted-foreground">Property</TableHead>
+                    <TableHead className="text-right text-muted-foreground">Amount</TableHead>
+                    <TableHead className="text-center text-muted-foreground">Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredTransactionHistory.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-muted-foreground">
+                        No transactions found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredTransactionHistory.map((transaction) => (
+                      <TableRow key={transaction.id}>
+                        <TableCell className="text-foreground">
+                          {new Date(transaction.date).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell className="font-medium text-foreground">{transaction.description}</TableCell>
+                        <TableCell>
+                          <Badge
+                            variant="secondary"
+                            className={
+                              transaction.type === "payment"
+                                ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+                                : "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
+                            }
+                          >
+                            {transaction.type.charAt(0).toUpperCase() + transaction.type.slice(1)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-foreground">{getPropertyName(transaction.property)}</TableCell>
+                        <TableCell
+                          className={cn(
+                            "text-right font-semibold",
+                            transaction.type === "payment"
+                              ? "text-green-600 dark:text-green-400"
+                              : "text-red-600 dark:text-red-400",
                           )}
-                        </div>
-                      </div>
-
-                      {/* Corporate properties */}
-                      <div>
-                        <div className="mb-2 flex items-center gap-2">
-                          <div className="h-3 w-3 rounded-full bg-amber-500" />
-                          <span className="text-sm font-medium text-foreground">Corporate</span>
-                        </div>
-                        <div className="ml-5 space-y-2">
-                          {revenueByPropertyAndType["corporate"].slice(0, 3).map((property) => (
-                            <div
-                              key={property.propertyId}
-                              className="flex items-center justify-between rounded-lg border border-border bg-muted/30 p-2"
-                            >
-                              <span className="text-sm text-foreground">{property.propertyName}</span>
-                              <span className="text-sm font-semibold text-foreground">
-                                GMD {formatCurrency(property.revenue)}
-                              </span>
-                            </div>
-                          ))}
-                          {revenueByPropertyAndType["corporate"].length === 0 && (
-                            <div className="text-sm text-muted-foreground">No properties</div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </Card>
+                        >
+                          {transaction.type === "payment" ? "+" : "-"}GMD {formatCurrency(Math.abs(transaction.amount))}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge
+                            variant={transaction.status === "completed" ? "default" : "secondary"}
+                            className={
+                              transaction.status === "completed"
+                                ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+                                : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300"
+                            }
+                          >
+                            {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
             </div>
+          </Card>
+        </div>
 
-            <div className="mt-6">
-              <Card className="border-border bg-card">
-                <div className="p-6">
-                  <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <h2 className="font-sans text-lg font-semibold text-foreground">Payments</h2>
-                      <p className="text-sm text-muted-foreground">Track incoming payments across your portfolio</p>
-                    </div>
-                    <Button variant="outline" size="sm">
-                      <FileDown className="mr-2 h-4 w-4" />
-                      Export
-                    </Button>
-                  </div>
+        {/* Expense Tab Content - WRAPPED IN TABS COMPONENT */}
+        <Tabs value={activeTab} onValueChange={(value: FinancialsTab) => setActiveTab(value)}>
+          <TabsList className="mb-6 grid w-full grid-cols-2">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="expenses">Expenses</TabsTrigger>
+          </TabsList>
 
-                  {/* Filters */}
-                  <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-                    <Select value={paymentPropertyFilter} onValueChange={setPaymentPropertyFilter}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="All Properties" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Properties</SelectItem>
-                        {properties.map((property) => (
-                          <SelectItem key={property.id} value={String(property.id)}>
-                            {property.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    <Input
-                      type="number"
-                      placeholder="Min Amount"
-                      value={paymentAmountMin}
-                      onChange={(e) => setPaymentAmountMin(e.target.value)}
-                    />
-
-                    <Input
-                      type="number"
-                      placeholder="Max Amount"
-                      value={paymentAmountMax}
-                      onChange={(e) => setPaymentAmountMax(e.target.value)}
-                    />
-
-                    <Input
-                      type="date"
-                      placeholder="From Date"
-                      value={paymentDateFrom}
-                      onChange={(e) => setPaymentDateFrom(e.target.value)}
-                    />
-
-                    <Input
-                      type="date"
-                      placeholder="To Date"
-                      value={paymentDateTo}
-                      onChange={(e) => setPaymentDateTo(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="max-h-[500px] overflow-y-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="text-muted-foreground">Date</TableHead>
-                          <TableHead className="text-muted-foreground">Description</TableHead>
-                          <TableHead className="text-muted-foreground">Property</TableHead>
-                          <TableHead className="text-right text-muted-foreground">Amount</TableHead>
-                          <TableHead className="text-center text-muted-foreground">Status</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredRecentPayments.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={5} className="text-center text-muted-foreground">
-                              No payments found
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          filteredRecentPayments.map((payment) => (
-                            <TableRow key={payment.id}>
-                              <TableCell className="text-foreground">
-                                {new Date(payment.date).toLocaleDateString()}
-                              </TableCell>
-                              <TableCell className="font-medium text-foreground">{payment.description}</TableCell>
-                              <TableCell className="text-foreground">{getPropertyName(payment.property)}</TableCell>
-                              <TableCell className="text-right font-semibold text-green-600 dark:text-green-400">
-                                GMD {formatCurrency(payment.amount)}
-                              </TableCell>
-                              <TableCell className="text-center">
-                                <Badge
-                                  variant={payment.status === "completed" ? "default" : "secondary"}
-                                  className={
-                                    payment.status === "completed"
-                                      ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
-                                      : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300"
-                                  }
-                                >
-                                  {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
-                                </Badge>
-                              </TableCell>
-                            </TableRow>
-                          ))
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-              </Card>
+          <TabsContent value="overview">
+            {/* This is where the overview content would go if it were separated */}
+            {/* For now, we'll keep the existing overview content here */}
+            <div className="mx-auto max-w-7xl space-y-6 p-6">
+              {/* Re-render the overview content here */}
+              {/* This might require refactoring to avoid duplication */}
+              {/* Or, conditionally render based on activeTab */}
             </div>
           </TabsContent>
 
-          {/* Expenses Tab Content */}
           <TabsContent value="expenses" className="space-y-6">
             {/* Expense Summary Cards */}
             <div className="grid gap-4 md:grid-cols-3">
