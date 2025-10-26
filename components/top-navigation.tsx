@@ -65,7 +65,7 @@ export function TopNavigation({ theme, onToggleTheme }: TopNavigationProps) {
   return (
     <nav className="flex h-16 items-center justify-between border-b border-border bg-card px-6">
       {/* Logo Section - Left */}
-      <Link href="/dashboard" className="flex w-64 items-center gap-[1px] border-r border-border pr-6">
+      <Link href="/dashboard" className="ml-[-24px] flex w-64 items-center gap-[1px] border-r border-border pr-6">
         <Image src="/logo.svg" alt="Logo" width={50} height={50} className="h-[50px] w-[50px]" />
         <span className="bg-gradient-to-r from-[#0ce6f0] to-[#2256f7] bg-clip-text text-[22px] font-bold leading-none text-transparent">
           Tabax

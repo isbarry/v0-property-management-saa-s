@@ -2,12 +2,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { CreditCard, MessageCircle, Mail, Calendar, Key, ExternalLink, Home, DollarSign } from "lucide-react"
+import Image from "next/image"
 
 const integrations = [
   {
     name: "Stripe",
     description: "Accept credit card payments and manage subscriptions",
     icon: CreditCard,
+    logo: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/stripe-aHLUjq4vocxw856i91nDr9cP2VEPFc.png",
     status: "connected",
     category: "Payment Gateway",
   },
@@ -15,6 +17,7 @@ const integrations = [
     name: "PayPal",
     description: "Alternative payment processing solution",
     icon: CreditCard,
+    logo: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/PayPal_Logo_Icon_2014-EmAjF7IuBYEqnwUDTxgZW7JS24DffU.svg",
     status: "not-connected",
     category: "Payment Gateway",
   },
@@ -22,6 +25,7 @@ const integrations = [
     name: "SendWave",
     description: "Mobile money transfers and payment processing",
     icon: DollarSign,
+    logo: "/images/sendwave-logo.png",
     status: "not-connected",
     category: "Payment Gateway",
   },
@@ -29,6 +33,7 @@ const integrations = [
     name: "WhatsApp Business",
     description: "Send automated messages and notifications to tenants",
     icon: MessageCircle,
+    logo: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/pngtree-whatsapp-icon-png-image_3584845-DWjT3CUXorz1tVldFTF3k8X2btDArP.jpg",
     status: "connected",
     category: "Communication",
   },
@@ -50,6 +55,7 @@ const integrations = [
     name: "Google Calendar",
     description: "Sync bookings and maintenance schedules",
     icon: Calendar,
+    logo: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/png-transparent-google-calendar-logo-icon-DJsASLnPKaX95eZ2epLvitaJHJ2Pc6.png",
     status: "not-connected",
     category: "Calendar",
   },
@@ -57,6 +63,7 @@ const integrations = [
     name: "Airbnb",
     description: "Sync listings, bookings, and guest communications",
     icon: Home,
+    logo: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/airbnb-logo-oHIER5yp97l7rB13EVoCGYgUzVGoYL.png",
     status: "not-connected",
     category: "Booking Platform",
   },
@@ -64,6 +71,7 @@ const integrations = [
     name: "VRBO",
     description: "Manage vacation rental listings and reservations",
     icon: Home,
+    logo: "/images/vrbo-logo.png",
     status: "not-connected",
     category: "Booking Platform",
   },
@@ -126,7 +134,17 @@ export default function IntegrationsPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="rounded-lg bg-primary/10 p-2">
-                      <Icon className="h-5 w-5 text-primary" />
+                      {integration.logo ? (
+                        <Image
+                          src={integration.logo || "/placeholder.svg"}
+                          alt={`${integration.name} logo`}
+                          width={40}
+                          height={40}
+                          className="h-10 w-10 object-contain"
+                        />
+                      ) : (
+                        <Icon className="h-10 w-10 text-primary" />
+                      )}
                     </div>
                     <div>
                       <CardTitle className="text-lg">{integration.name}</CardTitle>
