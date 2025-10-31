@@ -7,6 +7,7 @@ import { Sun, Moon, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useState, useEffect } from "react"
+import { GlobalSearch } from "@/components/global-search"
 
 interface TopNavigationProps {
   theme: "light" | "dark"
@@ -71,6 +72,10 @@ export function TopNavigation({ theme, onToggleTheme }: TopNavigationProps) {
           Tabax
         </span>
       </Link>
+
+      <div className="flex-1 px-6">
+        <GlobalSearch />
+      </div>
 
       {/* Right Section - Profile & Actions */}
       <div className="flex items-center gap-3">

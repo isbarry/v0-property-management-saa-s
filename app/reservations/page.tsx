@@ -1,12 +1,17 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { EnhancedReservationTable } from "@/components/reservations/enhanced-reservation-table"
 import { MasterTimelineCalendar } from "@/components/reservations/master-timeline-calendar"
 import { MinimumLoadingWrapper } from "@/components/ui/minimum-loading-wrapper"
 
 export default function ReservationsPage() {
+  const searchParams = useSearchParams()
+  const globalSearch = searchParams.get("search") || ""
+
   const [reservations, setReservations] = useState([])
+  const [filteredReservations, setFilteredReservations] = useState([])
   const [properties, setProperties] = useState([])
   const [tenants, setTenants] = useState([])
   const [blockedDates, setBlockedDates] = useState([])
@@ -28,10 +33,12 @@ export default function ReservationsPage() {
       const blockedData = await blockedRes.json()
 
       console.log("[v0] Reservations data loaded")
-      setReservations(reservationsData.reservations || [])
+      const allReservations = reservationsData.reservations || []
+      setReservations(allReservations)
+      setFilteredReservations(allReservations)
       setProperties(propertiesData.properties || [])
       setTenants(tenantsData.tenants || [])
-      setBlockedDates(blockedData.blocked_dates || []) // Fixed case mismatch - API returns blocked_dates not blockedDates
+      setBlockedDates(blockedData.blocked_dates || [])
     } catch (error) {
       console.error("[v0] Error fetching reservations data:", error)
     } finally {
@@ -52,6 +59,30 @@ export default function ReservationsPage() {
       window.removeEventListener("refreshReservations", handleRefresh)
     }
   }, [])
+
+  useEffect(() => {
+    if (!globalSearch) {
+      setFilteredReservations(reservations)
+      return
+    }
+
+    const searchLower = globalSearch.toLowerCase()
+    const filtered = reservations.filter((reservation: any) => {
+      const property = properties.find((p: any) => p.id === reservation.property_id)
+      const tenant = tenants.find((t: any) => t.id === reservation.tenant_id)
+
+      return (
+        (property?.unit_name && property.unit_name.toLowerCase().includes(searchLower)) ||
+        (property?.location && property.location.toLowerCase().includes(searchLower)) ||
+        (tenant?.name && tenant.name.toLowerCase().includes(searchLower)) ||
+        (reservation.confirmation_number && reservation.confirmation_number.toLowerCase().includes(searchLower)) ||
+        (reservation.status && reservation.status.toLowerCase().includes(searchLower))
+      )
+    })
+
+    console.log(`[v0] Filtered ${filtered.length} reservations from ${reservations.length}`)
+    setFilteredReservations(filtered)
+  }, [globalSearch, reservations, properties, tenants])
 
   const reservationsSkeleton = (
     <div className="mx-auto max-w-7xl space-y-6 p-6">
@@ -95,13 +126,19 @@ export default function ReservationsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="font-sans text-3xl font-bold tracking-tight text-foreground">Reservations</h1>
-            <p className="text-sm text-muted-foreground">Manage property reservations and bookings</p>
+            <p className="text-sm text-muted-foreground">
+              Manage property reservations and bookings ({filteredReservations.length} of {reservations.length})
+            </p>
           </div>
         </div>
 
-        <MasterTimelineCalendar reservations={reservations} properties={properties} blockedDates={blockedDates} />
+        <MasterTimelineCalendar
+          reservations={filteredReservations}
+          properties={properties}
+          blockedDates={blockedDates}
+        />
 
-        <EnhancedReservationTable reservations={reservations} properties={properties} tenants={tenants} />
+        <EnhancedReservationTable reservations={filteredReservations} properties={properties} tenants={tenants} />
       </div>
     </MinimumLoadingWrapper>
   )

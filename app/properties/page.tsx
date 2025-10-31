@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { PropertyGrid } from "@/components/properties/property-grid"
 import { BuildingGrid } from "@/components/properties/building-grid"
 import { PropertyDialog } from "@/components/properties/property-dialog"
@@ -12,6 +13,8 @@ import type { Property } from "@/lib/types/database"
 import type { BuildingData } from "@/components/properties/building-card"
 
 export default function PropertiesPage() {
+  const searchParams = useSearchParams()
+  const globalSearch = searchParams.get("search") || ""
   const [viewMode, setViewMode] = useState<"units" | "properties">("units")
   const [allProperties, setAllProperties] = useState<Property[]>([])
   const [filteredProperties, setFilteredProperties] = useState<Property[]>([])
@@ -52,15 +55,18 @@ export default function PropertiesPage() {
   const handleFilterChange = (filters: FilterState) => {
     console.log("[v0] Applying filters:", filters)
 
+    const searchTerm = filters.search || globalSearch
+
     if (viewMode === "units") {
       let filtered = [...allProperties]
 
-      if (filters.search) {
-        const searchLower = filters.search.toLowerCase()
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase()
         filtered = filtered.filter(
           (p) =>
             p.unit_name.toLowerCase().includes(searchLower) ||
-            (p.location && p.location.toLowerCase().includes(searchLower)),
+            (p.location && p.location.toLowerCase().includes(searchLower)) ||
+            (p.building_name && p.building_name.toLowerCase().includes(searchLower)),
         )
       }
 
@@ -95,8 +101,8 @@ export default function PropertiesPage() {
     } else {
       let filtered = [...allBuildings]
 
-      if (filters.search) {
-        const searchLower = filters.search.toLowerCase()
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase()
         filtered = filtered.filter(
           (b) =>
             b.name.toLowerCase().includes(searchLower) ||
@@ -112,6 +118,19 @@ export default function PropertiesPage() {
       setFilteredBuildings(filtered)
     }
   }
+
+  useEffect(() => {
+    if (globalSearch) {
+      handleFilterChange({
+        search: globalSearch,
+        locationId: "all",
+        propertyType: "all",
+        bedrooms: "all",
+        bathrooms: "all",
+        amenities: [],
+      })
+    }
+  }, [globalSearch, allProperties, allBuildings])
 
   const handleDataUpdated = () => {
     fetchData()
